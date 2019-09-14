@@ -1,4 +1,4 @@
-import polka.Lexer
+import polka.{Lexer, Parser}
 import scala.io.Source
 
 object Main:
@@ -8,4 +8,6 @@ object Main:
     val source = Source.fromFile(filename)
     val program = source.mkString
     source.close()
-    println(Lexer(program).run())
+    Lexer(program).run() match
+      case Left(err) => println(err)
+      case Right(tokens) => println(Parser(tokens).run())

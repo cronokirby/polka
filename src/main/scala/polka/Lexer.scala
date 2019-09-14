@@ -1,6 +1,5 @@
 package polka
 
-import scala.annotation.tailrec
 import scala.collection.BufferedIterator
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
@@ -57,7 +56,6 @@ class Lexer(program: String):
       case None => done = true
     if !errors.isEmpty then Left(errors.toSeq) else Right(tokens.toSeq)
 
-  @tailrec
   private def advance(): Option[Either[Error, Token]] =
     while source.hasNext do
       source.head match

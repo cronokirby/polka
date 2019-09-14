@@ -6,6 +6,7 @@
 # sbt specific
 dist/*
 target/
+project/project/
 project/target/
 lib_managed/
 src_managed/

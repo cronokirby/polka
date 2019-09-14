@@ -59,35 +59,33 @@ class Lexer(program: String):
 
   @tailrec
   private def advance(): Option[Either[Error, Token]] =
-    if !source.hasNext then
-      None
-    else
+    while source.hasNext do
       source.head match
       case '(' => 
         source.next()
-        Some(Right(Token.OpenParens))
+        return Some(Right(Token.OpenParens))
       case ')' =>
         source.next()
-        Some(Right(Token.CloseParens))
+        return Some(Right(Token.CloseParens))
       case '{' =>
         source.next()
-        Some(Right(Token.OpenBrace))
+        return Some(Right(Token.OpenBrace))
       case '}' =>
         source.next()
-        Some(Right(Token.CloseBrace))
+        return Some(Right(Token.CloseBrace))
       case ';' =>
         source.next()
-        Some(Right(Token.SemiColon))
+        return Some(Right(Token.SemiColon))
       case c if c.isLetter =>
         val word = alphanumeric()
         val matched = keyword(word)
-        Some(matched.toRight(Error(s"Unkown keyword $word")))
+        return Some(matched.toRight(Error(s"Unkown keyword $word")))
       case i if i.isDigit =>
         val litteral = numeric()
-        Some(Right(Token.IntLitteral(litteral)))
+        return Some(Right(Token.IntLitteral(litteral)))
       case _ =>
         source.next()
-        advance()
+    None
 
   private def numeric(): Int =
     var acc = 0

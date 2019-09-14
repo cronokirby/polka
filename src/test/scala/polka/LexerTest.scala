@@ -22,3 +22,17 @@ class LexerTest:
       Token.CloseBrace,
     )
     assertEquals(Right(expected), items)
+  
+  @Test
+  def programsWithCommentsLex(): Unit =
+    val program = "// stuff\n/* **stuff**/int"
+    val items = Lexer(program).run()
+    val expected = Seq(Token.IntType)
+    assertEquals(Right(expected), items)
+
+  @Test
+  def singleLitteralsLex(): Unit =
+    val program = "34"
+    val items = Lexer(program).run()
+    val expected = Seq(Token.IntLitteral(34))
+    assertEquals(Right(expected), items)

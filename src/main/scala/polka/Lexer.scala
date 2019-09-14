@@ -74,6 +74,12 @@ class Lexer(program: String):
       case ';' =>
         source.next()
         return Some(Right(Token.SemiColon))
+      case '/' =>
+        source.next()
+        source.headOption match
+        case Some('/') => singleLineComment()
+        case Some('*') => multiLineComment()
+        case _ => return Some(Left(Error("Unknown token `/`")))
       case c if c.isLetter =>
         val word = alphanumeric()
         val matched = keyword(word)
@@ -87,14 +93,14 @@ class Lexer(program: String):
 
   private def numeric(): Int =
     var acc = 0
-    while source.head.isDigit do
+    while source.hasNext && source.head.isDigit do
       acc = 10 * acc + source.next().asDigit
     acc
 
   private def alphanumeric(): String =
     val acc = StringBuilder()
     // This is fine because we've entered this function on a letter
-    while source.head.isLetterOrDigit do acc.append(source.next())
+    while source.hasNext && source.head.isLetterOrDigit do acc.append(source.next())
     acc.toString
 
   private def keyword(word: String): Option[Token] = word match
@@ -102,3 +108,14 @@ class Lexer(program: String):
     case "main" => Some(Token.Main)
     case "return" => Some(Token.Return)
     case _ => None
+  
+  private def singleLineComment(): Unit =
+    while source.hasNext && source.head != '\n' do source.next()
+
+  private def multiLineComment(): Unit =
+    var stage = 0
+    while source.hasNext do
+      (stage, source.next()) match
+      case (_, '*') => stage = 1
+      case (1, '/') => return
+      case _ => stage = 0

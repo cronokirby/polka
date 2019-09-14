@@ -13,6 +13,6 @@ class ParserTest:
 
   @Test
   def basicProgramParses(): Unit =
-    val program = "int main() { return bar; }"
+    val program = "int main() { return 100; }"
     val expected = IntMainReturn(Expr.IntLitteral(100))
     assertEquals(Right(expected), parse(program))

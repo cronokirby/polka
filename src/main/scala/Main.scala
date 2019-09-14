@@ -12,9 +12,9 @@ object Main:
     val program = source.mkString
     source.close()
     Lexer(program).run() match
-      case Left(err) => println(err)
+      case Left(err) => println(s"Lexing Errors: $err")
       case Right(tokens) => Parser(tokens).run() match
-        case Left(err) => println(err)
+        case Left(err) => println(s"Parsing Error: $err $tokens")
         case Right(program) =>
           val out = outname match
             case Some(file) => FileOutputStream(file)

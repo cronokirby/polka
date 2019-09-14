@@ -2,10 +2,10 @@ package polka
 
 import scala.annotation.tailrec
 import scala.collection.BufferedIterator
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
 
 object Lexer:
-
   /** A token produced when lexing the C language. */
   enum Token:
     /** A hardcoded `int` type */
@@ -30,67 +30,80 @@ object Lexer:
   /** Represents the type of errors the lexing stage will generate */
   case class Error(message: String)
 
-  private class LexIterator(source: BufferedIterator[Char]) extends Iterator[Either[Error, Token]]:
+/** A class to produce tokens from a program's source code.
+ * 
+ * @constructor creates a new lexer given some source code.
+ * @param program the source code to lex
+ */
+class Lexer(program: String):
+  import Lexer._ 
 
-    def hasNext: Boolean = source.hasNext
+  val source = program.iterator.buffered
 
-    def next(): Either[Error, Token] = doNext()
+  /** Run this lexer on its program.
+   *
+   * This method can only be run once, subsequent calls will be empty.
+   *
+   * @return either a sequence of [[Lexer.Token]], or [[Lexer.Error]]
+   */
+  def run(): Either[Seq[Error], Seq[Token]] =
+    val errors = ArrayBuffer[Error]()
+    val tokens = ArrayBuffer[Token]()
+    var done = false
+    while !done do
+      advance() match
+      case Some(Right(token)) => tokens += token
+      case Some(Left(error)) => errors += error
+      case None => done = true
+    if !errors.isEmpty then Left(errors.toSeq) else Right(tokens.toSeq)
 
-    @tailrec
-    private def doNext(): Either[Error, Token] =
+  @tailrec
+  private def advance(): Option[Either[Error, Token]] =
+    if !source.hasNext then
+      None
+    else
       source.head match
       case '(' => 
         source.next()
-        Right(Token.OpenParens)
+        Some(Right(Token.OpenParens))
       case ')' =>
         source.next()
-        Right(Token.CloseParens)
+        Some(Right(Token.CloseParens))
       case '{' =>
         source.next()
-        Right(Token.OpenBrace)
+        Some(Right(Token.OpenBrace))
       case '}' =>
         source.next()
-        Right(Token.CloseBrace)
+        Some(Right(Token.CloseBrace))
       case ';' =>
         source.next()
-        Right(Token.SemiColon)
+        Some(Right(Token.SemiColon))
       case c if c.isLetter =>
         val word = alphanumeric()
         val matched = keyword(word)
-        matched.toRight(Error(s"Unkown keyword $word"))
+        Some(matched.toRight(Error(s"Unkown keyword $word")))
       case i if i.isDigit =>
         val litteral = numeric()
-        Right(Token.IntLitteral(litteral))
+        Some(Right(Token.IntLitteral(litteral)))
       case _ =>
         source.next()
-        doNext()
+        advance()
 
-    private def numeric(): Int =
-      var acc = 0
-      while source.head.isDigit do
-        acc = 10 * acc + source.next().asDigit
-      acc
+  private def numeric(): Int =
+    var acc = 0
+    while source.head.isDigit do
+      acc = 10 * acc + source.next().asDigit
+    acc
 
-    private def alphanumeric(): String =
-      val acc = StringBuilder()
-      // This is fine because we've entered this function on a letter
-      while source.head.isLetterOrDigit do acc.append(source.next())
-      acc.toString
+  private def alphanumeric(): String =
+    val acc = StringBuilder()
+    // This is fine because we've entered this function on a letter
+    while source.head.isLetterOrDigit do acc.append(source.next())
+    acc.toString
 
-    private def keyword(word: String): Option[Token] =
-      word match
-      case "int" => Some(Token.IntType)
-      case "main" => Some(Token.Main)
-      case "return" => Some(Token.Return)
-      case _ => None
-
-  /** Attempt to split a program into a series of tokens.
-   *
-   *  @param program the text composing the program's code
-   *  @return a sequence of [[Lexer.Token]], or a [[Lexer.Error]]
-   */
-  def lex(program: String): Either[Seq[Error], Seq[Token]] =
-    val source = program.iterator.buffered
-    val seq = LexIterator(source).toSeq
-    val (errors, tokens) = seq.partitionMap(identity)
-    if !errors.isEmpty then Left(errors) else Right(tokens)
+  private def keyword(word: String): Option[Token] =
+    word match
+    case "int" => Some(Token.IntType)
+    case "main" => Some(Token.Main)
+    case "return" => Some(Token.Return)
+    case _ => None

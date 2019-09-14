@@ -97,8 +97,7 @@ class Lexer(program: String):
     while source.head.isLetterOrDigit do acc.append(source.next())
     acc.toString
 
-  private def keyword(word: String): Option[Token] =
-    word match
+  private def keyword(word: String): Option[Token] = word match
     case "int" => Some(Token.IntType)
     case "main" => Some(Token.Main)
     case "return" => Some(Token.Return)

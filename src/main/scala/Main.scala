@@ -14,4 +14,4 @@ object Main:
       case Right(tokens) => Parser(tokens).run() match
         case Left(err) => println(err)
         case Right(program) =>
-          Assembler(System.out).output(program)
+          Assembler(System.out).generate(program)

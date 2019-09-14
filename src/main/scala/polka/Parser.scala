@@ -25,14 +25,12 @@ class Parser(tokens: Iterable[Token]):
     yield
       IntMainReturn(e)
 
-  private def eat(token: Lexer.Token): Either[Error, Unit] =
-    iter.nextOption match
+  private def eat(token: Lexer.Token): Either[Error, Unit] = iter.nextOption match
     case Some(t) if t == token => Right(())
     case Some(t) => Left(Error(s"Expected $token but got $t"))
     case None => Left(Error("Unexpected end of input"))
 
-  private def expr(): Either[Error, Expr] =
-    iter.nextOption match
+  private def expr(): Either[Error, Expr] = iter.nextOption match
     case Some(Token.IntLitteral(i)) => Right(Expr.IntLitteral(i))
     case Some(t) => Left(Error(s"Expected expression, found $t"))
     case None => Left(Error("Unexpected end of input"))

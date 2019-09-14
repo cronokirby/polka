@@ -2,7 +2,6 @@ package polka
 
 import scala.annotation.tailrec
 import scala.collection.BufferedIterator
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
 
 object Lexer:
@@ -28,6 +27,7 @@ object Lexer:
     /** An integer litteral */
     case IntLitteral(value: Int)
 
+  /** Represents the type of errors the lexing stage will generate */
   case class Error(message: String)
 
   private class LexIterator(source: BufferedIterator[Char]) extends Iterator[Either[Error, Token]]:
@@ -84,9 +84,13 @@ object Lexer:
       case "return" => Some(Token.Return)
       case _ => None
 
+  /** Attempt to split a program into a series of tokens.
+   *
+   *  @param program the text composing the program's code
+   *  @return a sequence of [[Lexer.Token]], or a [[Lexer.Error]]
+   */
   def lex(program: String): Either[Seq[Error], Seq[Token]] =
     val source = program.iterator.buffered
-    val iter = LexIterator(source)
-    val seq = iter.toSeq
+    val seq = LexIterator(source).toSeq
     val (errors, tokens) = seq.partitionMap(identity)
     if !errors.isEmpty then Left(errors) else Right(tokens)

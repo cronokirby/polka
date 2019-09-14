@@ -28,3 +28,7 @@ classes/
 .idea
 .idea_modules
 /.worksheet/
+
+# Commonly used when testing compiler output
+a.s
+a.out

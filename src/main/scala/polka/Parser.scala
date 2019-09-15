@@ -31,6 +31,9 @@ class Parser(tokens: Iterable[Token]):
     case None => Left(Error("Unexpected end of input"))
 
   private def expr(): Either[Error, Expr] = iter.nextOption match
-    case Some(Token.IntLitteral(i)) => Right(Expr.IntLitteral(i))
+    case Some(Token.IntLitteral(i)) => Right(Expr.Litteral(i))
+    case Some(Token.Exclamation) => expr().map(Expr.Not(_))
+    case Some(Token.Tilde) => expr().map(Expr.BitNot(_))
+    case Some(Token.Minus) => expr().map(Expr.Negate(_))
     case Some(t) => Left(Error(s"Expected expression, found $t"))
     case None => Left(Error("Unexpected end of input"))

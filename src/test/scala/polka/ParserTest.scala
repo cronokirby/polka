@@ -14,5 +14,10 @@ class ParserTest:
   @Test
   def basicProgramParses(): Unit =
     val program = "int main() { return 100; }"
-    val expected = IntMainReturn(Expr.IntLitteral(100))
+    val expected = IntMainReturn(Expr.Litteral(100))
     assertEquals(Right(expected), parse(program))
+
+  @Test
+  def unaryOperatorsParse(): Unit =
+    val program = "int main() { return !~-100; }"
+    val expected = IntMainReturn(Expr.Not(Expr.BitNot(Expr.Negate(Expr.Litteral(100)))))

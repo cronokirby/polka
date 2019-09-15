@@ -12,12 +12,15 @@ object Assembler:
    *  the `mov` instruction can be used with `movq`, or `movl` etc.
    *  Each of these is operating on a differently sized datatype
    */
-  enum Size(val output: String):
+  private enum Size(val out: String):
+    case B extends Size("b")
     case L extends Size("l")
 
   /** This enum holds all the possible registers */
-  enum Reg:
+  private enum Reg:
     case RAX
+    
+    def sized(size: Size): Register = Register(this, size)
 
   /** This represents a reference to an actual register.
    *
@@ -27,20 +30,23 @@ object Assembler:
    *  @param name the name of this register
    *  @param size the size we're using this register with
    */
-  case class Register(name: Reg, size: Size):
-    def output: String = (name, size) match
+  private case class Register(name: Reg, size: Size):
+    def sized(newsize: Size): Register = Register(name, newsize)
+
+    def out: String = (name, size) match
+      case (Reg.RAX, Size.B) => "%al"
       case (Reg.RAX, Size.L) => "%eax"
   
   /** This represents an argument to a given instruction */
-  enum Arg:
+  private enum Arg:
     /** We're using a value immediately. e.g. `$34` */
-    case Immediate(int: Int)
+    case I(int: Int)
     /** We're using the direct value of a register, e.g. `%rax` */
-    case Direct(reg: Register)
+    case R(reg: Register)
 
-    def output: String = this match
-      case Immediate(int) => "$" + int.toString
-      case Direct(reg) => reg.output
+    def out: String = this match
+      case I(int) => "$" + int.toString
+      case R(reg) => reg.out
 
 /** A code generator, hooked into an output stream.
  *
@@ -56,11 +62,33 @@ class Assembler(private val out: OutputStream):
   def generate(program: IntMainReturn): Unit =
     writeln("\t.globl\tmain")
     label("main")
-    program.expr match
-    case Expr.IntLitteral(int) =>
-      val register = Register(Reg.RAX, Size.L)
-      mov(Size.L, Arg.Immediate(int), Arg.Direct(register))
+    expr(program.expr)
     ret()
+
+  private def expr(theExpr: Expr): Register = theExpr match
+    case Expr.Litteral(int) => litteral(int)
+    case Expr.Not(theExpr) =>
+      val regl = expr(theExpr)
+      val regb = regl.sized(Size.B)
+      // If int == 0, set first byte of int to 1, else 0
+      test(Size.L, Arg.R(regl), Arg.R(regl))
+      sete(Arg.R(regb))
+      // Upgrade byte to full integer
+      movz(Size.B, Size.L, Arg.R(regb), Arg.R(regl))
+      regl
+    case Expr.BitNot(theExpr) =>
+      val regl = expr(theExpr)
+      not(Size.L, Arg.R(regl))
+      regl
+    case Expr.Negate(theExpr) =>
+      val regl = expr(theExpr)
+      neg(Size.L, Arg.R(regl))
+      regl
+
+  private def litteral(int: Int): Register =
+    val regl = Register(Reg.RAX, Size.L)
+    mov(Size.L, Arg.I(int), Arg.R(regl))
+    regl
   
   private def write(string: String): Unit =
     out.write(string.getBytes("UTF8"))
@@ -72,9 +100,27 @@ class Assembler(private val out: OutputStream):
   private def label(label: String): Unit =
     write(label)
     writeln(":")
+  
+  private def instruction(name: String, size: Size, source: Arg, dest: Arg): Unit =
+    writeln(s"\t${name}${size.out}\t${source.out}, ${dest.out}")
 
   private def mov(size: Size, source: Arg, dest: Arg): Unit =
-    writeln(s"\tmov${size.output}\t${source.output}, ${dest.output}")
+    instruction("mov", size, source, dest)
+  
+  private def movz(sourceSize: Size, destSize: Size, source: Arg, dest: Arg): Unit =
+    writeln(s"\tmovz${sourceSize.out}${destSize.out}\t${source.out}, ${dest.out}")
+  
+  private def neg(size: Size, arg: Arg): Unit =
+    writeln(s"\tneg${size.out}\t${arg.out}")
+
+  private def not(size: Size, arg: Arg): Unit =
+    writeln(s"\tnot${size.out}\t${arg.out}")
+
+  private def sete(dest: Arg): Unit =
+    writeln(s"\tsete\t${dest.out}")
+  
+  private def test(size: Size, source: Arg, dest: Arg): Unit =
+    instruction("test", size, source, dest)
 
   private def ret(): Unit =
     writeln("\tret")

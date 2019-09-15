@@ -23,6 +23,12 @@ object Lexer:
     case CloseBrace
     /** The punctuation `;` */
     case SemiColon
+    /** The operator `!` */
+    case Exclamation
+    /** The operator `~` */
+    case Tilde
+    /** The operator `-` */
+    case Minus
     /** An integer litteral */
     case IntLitteral(value: Int)
 
@@ -80,6 +86,15 @@ class Lexer(program: String):
         case Some('/') => singleLineComment()
         case Some('*') => multiLineComment()
         case _ => return Some(Left(Error("Unknown token `/`")))
+      case '!' =>
+        source.next()
+        return Some(Right(Token.Exclamation))
+      case '~' =>
+        source.next()
+        return Some(Right(Token.Tilde))
+      case '-' =>
+        source.next()
+        return Some(Right(Token.Minus))
       case c if c.isLetter =>
         val word = alphanumeric()
         val matched = keyword(word)

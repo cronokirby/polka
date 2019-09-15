@@ -36,3 +36,17 @@ class LexerTest:
     val items = Lexer(program).run()
     val expected = Seq(Token.IntLitteral(34))
     assertEquals(Right(expected), items)
+
+  @Test
+  def unaryOperatorsLex(): Unit =
+    val program = "!10 ~10 -10"
+    val items = Lexer(program).run()
+    val expected = Seq(
+      Token.Exclamation,
+      Token.IntLitteral(10),
+      Token.Tilde,
+      Token.IntLitteral(10),
+      Token.Minus,
+      Token.IntLitteral(10),
+    )
+    assertEquals(Right(expected), items)

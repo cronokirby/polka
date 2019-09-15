@@ -2,11 +2,15 @@ package polka
 
 /** This object holds classes related to our representation of C */
 object Syntax:
-
   /** Represents an expression in C. */
   enum Expr:
-    /** Represents an litteral integer, e.g. `320` */
-    case IntLitteral(value: Int)
+    case Litteral(value: Int)
+    /** Represents the use of logical negation `!` */
+    case Not(value: Expr)
+    /** Represents the use of bitwise not `~` */
+    case BitNot(value: Expr)
+    /** Represents the use of arithmetic negation `-` */
+    case Negate(value: Expr)
 
   /** Represents a hardcoded `int main()` function. 
    *

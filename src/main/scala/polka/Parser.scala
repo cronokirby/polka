@@ -6,7 +6,14 @@ import Syntax._
 object Parser:
   case class Error(message: String)
 
-class Parser(tokens: Iterable[Token]):
+  /** Given a sequence of tokens, try and parse that program into an AST
+   *
+   * @param tokens the series of tokens we've lexed.
+   * @return either an error in parsing, or the AST
+   */
+  def parse(tokens: Iterable[Token]): Either[Error, IntMainReturn] = Parser(tokens).run()
+
+private class Parser(tokens: Iterable[Token]):
   import Parser._
 
   val iter = tokens.iterator.buffered

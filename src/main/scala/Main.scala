@@ -11,9 +11,9 @@ object Main:
     val source = Source.fromFile(filename)
     val program = source.mkString
     source.close()
-    Lexer(program).run() match
+    Lexer.lex(program) match
       case Left(err) => println(s"Lexing Errors: $err")
-      case Right(tokens) => Parser(tokens).run() match
+      case Right(tokens) => Parser.parse(tokens) match
         case Left(err) => println(s"Parsing Error: $err $tokens")
         case Right(program) =>
           val out = outname match

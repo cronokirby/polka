@@ -15,10 +15,13 @@ object Assembler:
   private enum Size(val out: String):
     case B extends Size("b")
     case L extends Size("l")
+    case Q extends Size("q")
 
   /** This enum holds all the possible registers */
   private enum Reg:
     case RAX
+    case RBX
+    case RCX
     
     def sized(size: Size): Register = Register(this, size)
 
@@ -36,6 +39,13 @@ object Assembler:
     def out: String = (name, size) match
       case (Reg.RAX, Size.B) => "%al"
       case (Reg.RAX, Size.L) => "%eax"
+      case (Reg.RAX, Size.Q) => "%rax"
+      case (Reg.RBX, Size.B) => "%bl"
+      case (Reg.RBX, Size.L) => "%ebx"
+      case (Reg.RBX, Size.Q) => "%rbx"
+      case (Reg.RCX, Size.B) => "%cl"
+      case (Reg.RCX, Size.L) => "%ecx"
+      case (Reg.RCX, Size.Q) => "%rcx"
   
   /** This represents an argument to a given instruction */
   private enum Arg:
@@ -59,36 +69,66 @@ class Assembler(private val out: OutputStream):
    *
    *  @param program the AST for our C program.
    */
-  def generate(program: IntMainReturn): Unit = generate(program)
+  def generate(program: IntMainReturn): Unit =
     writeln("\t.globl\tmain")
     label("main")
-    expr(program.expr)
+    add(program.expr)
+    pop(Size.Q, Arg.R(Reg.RAX.sized(Size.Q)))
     ret()
+  
+  def add(expr: Add): Unit =
+    val owned = Reg.RAX.sized(Size.L)
+    val scratch = Reg.RCX.sized(Size.L)
+    mov(Size.L, Arg.I(0), Arg.R(owned))
+    expr.exprs.foreach:
+      m =>
+        multiply(m)
+        pop(Size.Q, Arg.R(scratch.sized(Size.Q)))
+        add(Size.L, Arg.R(scratch), Arg.R(owned))
+    // We need this if this expression is in ()
+    push(Size.Q, Arg.R(owned.sized(Size.Q)))
 
-  private def expr(theExpr: PrimaryExpr): Register = theExpr match
-    case Expr.Litteral(int) => litteral(int)
-    case Expr.Not(theExpr) =>
-      val regl = expr(theExpr)
+  def multiply(expr: Multiply): Unit =
+    val owned = Reg.RBX.sized(Size.L)
+    val scratch = Reg.RCX.sized(Size.L)
+    mov(Size.L, Arg.I(1), Arg.R(owned))
+    expr.exprs.foreach:
+      e =>
+        primExpr(e)
+        pop(Size.Q, Arg.R(scratch.sized(Size.Q)))
+        mul(Size.L, Arg.R(scratch), Arg.R(owned))
+    // We need this if this expression is in ()
+    push(Size.Q, Arg.R(owned.sized(Size.Q)))
+
+  private def primExpr(theExpr: PrimaryExpr): Unit = theExpr match
+    case PrimaryExpr.Litteral(int) => litteral(int)
+    case PrimaryExpr.Not(theExpr) =>
+      primExpr(theExpr)
+      val regl = Reg.RAX.sized(Size.L)
       val regb = regl.sized(Size.B)
+      pop(Size.Q, Arg.R(regl.sized(Size.Q)))
       // If int == 0, set first byte of int to 1, else 0
       test(Size.L, Arg.R(regl), Arg.R(regl))
       sete(Arg.R(regb))
       // Upgrade byte to full integer
       movz(Size.B, Size.L, Arg.R(regb), Arg.R(regl))
-      regl
-    case Expr.BitNot(theExpr) =>
-      val regl = expr(theExpr)
+      push(Size.Q, Arg.R(regl.sized(Size.Q)))
+    case PrimaryExpr.BitNot(theExpr) =>
+      primExpr(theExpr)
+      val regl = Reg.RAX.sized(Size.L)
+      pop(Size.Q, Arg.R(regl.sized(Size.Q)))
       not(Size.L, Arg.R(regl))
-      regl
-    case Expr.Negate(theExpr) =>
-      val regl = expr(theExpr)
+      push(Size.Q, Arg.R(regl.sized(Size.Q)))
+    case PrimaryExpr.Negate(theExpr) =>
+      primExpr(theExpr)
+      val regl = Reg.RAX.sized(Size.L)
+      pop(Size.Q, Arg.R(regl.sized(Size.Q)))
       neg(Size.L, Arg.R(regl))
-      regl
+      push(Size.Q, Arg.R(regl.sized(Size.Q)))
+    case PrimaryExpr.Parens(a) => add(a)
 
-  private def litteral(int: Int): Register =
-    val regl = Register(Reg.RAX, Size.L)
-    mov(Size.L, Arg.I(int), Arg.R(regl))
-    regl
+  private def litteral(int: Int): Unit =
+    push(Size.Q, Arg.I(int))
   
   private def write(string: String): Unit =
     out.write(string.getBytes("UTF8"))
@@ -103,6 +143,12 @@ class Assembler(private val out: OutputStream):
   
   private def instruction(name: String, size: Size, source: Arg, dest: Arg): Unit =
     writeln(s"\t${name}${size.out}\t${source.out}, ${dest.out}")
+  
+  private def add(size: Size, source: Arg, dest: Arg): Unit =
+    instruction("add", size, source, dest)
+  
+  private def mul(size: Size, source: Arg, dest: Arg): Unit =
+    instruction("imul", size, source, dest)
 
   private def mov(size: Size, source: Arg, dest: Arg): Unit =
     instruction("mov", size, source, dest)
@@ -115,6 +161,12 @@ class Assembler(private val out: OutputStream):
 
   private def not(size: Size, arg: Arg): Unit =
     writeln(s"\tnot${size.out}\t${arg.out}")
+  
+  private def pop(size: Size, arg: Arg): Unit =
+    writeln(s"\tpop${size.out}\t${arg.out}")
+  
+  private def push(size: Size, arg: Arg): Unit =
+    writeln(s"\tpush${size.out}\t${arg.out}")
 
   private def sete(dest: Arg): Unit =
     writeln(s"\tsete\t${dest.out}")

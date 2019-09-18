@@ -29,6 +29,10 @@ object Lexer:
     case Tilde
     /** The operator `-` */
     case Minus
+    /** The operator `+` */
+    case Plus
+    /** The operator `*` */
+    case Times
     /** An integer litteral */
     case IntLitteral(value: Int)
 
@@ -91,6 +95,12 @@ private class Lexer(program: String):
       case '-' =>
         source.next()
         return Some(Right(Token.Minus))
+      case '+' =>
+        source.next()
+        return Some(Right(Token.Plus))
+      case '*' =>
+        source.next()
+        return Some(Right(Token.Times))
       case c if c.isLetter =>
         val word = alphanumeric()
         val matched = keyword(word)

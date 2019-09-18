@@ -59,13 +59,13 @@ class Assembler(private val out: OutputStream):
    *
    *  @param program the AST for our C program.
    */
-  def generate(program: IntMainReturn): Unit =
+  def generate(program: IntMainReturn): Unit = generate(program)
     writeln("\t.globl\tmain")
     label("main")
     expr(program.expr)
     ret()
 
-  private def expr(theExpr: Expr): Register = theExpr match
+  private def expr(theExpr: PrimaryExpr): Register = theExpr match
     case Expr.Litteral(int) => litteral(int)
     case Expr.Not(theExpr) =>
       val regl = expr(theExpr)

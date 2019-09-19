@@ -62,16 +62,16 @@ object Assembler:
       binaryOp(op, source.sized(size).asm)
     
     private def unaryOp(op: String): Outputting[Unit] =
-      writeln(s"\t$op$size\t$asm")
+      writeln(s"\t${op}${size.asm}\t$asm")
 
     def add(source: Int): Outputting[Unit] = binaryOp("add", source)
     def add(source: Reg): Outputting[Unit] = binaryOp("add", source)
     
-    def mul(source: Int): Outputting[Unit] = binaryOp("mul", source)
-    def mul(source: Reg): Outputting[Unit] = binaryOp("mul", source)
+    def mul(source: Int): Outputting[Unit] = binaryOp("imul", source)
+    def mul(source: Reg): Outputting[Unit] = binaryOp("imul", source)
 
-    def mov(source: Int): Outputting[Unit] = binaryOp("mul", source)
-    def mov(source: Reg): Outputting[Unit] = binaryOp("mul", source)
+    def mov(source: Int): Outputting[Unit] = binaryOp("mov", source)
+    def mov(source: Reg): Outputting[Unit] = binaryOp("mov", source)
     
     def movz(source: Register): Outputting[Unit] =
       writeln(s"\tmovz${source.size.asm}${size.asm}\t${source.asm}, $asm")
@@ -104,9 +104,11 @@ class Assembler(private val out: OutputStream):
    *  @param program the AST for our C program.
    */
   def generate(program: IntMainReturn): Unit =
+    writeln("\t.globl\tmain")
     writeln("main:")
     add(program.expr)
     Reg.RAX.sized(Size.Q).pop()
+    writeln("\tret")
   
   def add(expr: Add): Unit =
     val owned = Reg.RAX.sized(Size.L)

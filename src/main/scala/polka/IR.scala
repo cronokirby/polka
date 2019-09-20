@@ -113,9 +113,9 @@ object IR:
     private def primExpr(expr: PrimaryExpr): Operand =
       def go(expr: PrimaryExpr, ops: Vector[UnaryOp]): (Either[Add, Int], Vector[UnaryOp]) = expr match
         case PrimaryExpr.Litteral(int) => (Right(int), ops)
-        case PrimaryExpr.Not(expr) => go(expr, ops :+ UnaryOp.Not)
-        case PrimaryExpr.BitNot(expr) => go(expr, ops :+ UnaryOp.BitNot)
-        case PrimaryExpr.Negate(expr) => go(expr, ops :+ UnaryOp.Negate)
+        case PrimaryExpr.Not(expr) => go(expr, UnaryOp.Not +: ops)
+        case PrimaryExpr.BitNot(expr) => go(expr, UnaryOp.BitNot +: ops)
+        case PrimaryExpr.Negate(expr) => go(expr, UnaryOp.Negate +: ops)
         case PrimaryExpr.Parens(expr) => (Left(expr), ops)
 
       val (root, ops) = go(expr, Vector.empty)

@@ -11,7 +11,6 @@ object IR:
    *  There are some rules governing when these can be used:
    *  - They can only appear on the left side of a statement once
    *  - They can only appear on the right side of a statement once
-   *  - They appear in increasing order
    *
    * @param index the index of this name
    */

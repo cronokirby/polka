@@ -2,6 +2,7 @@ package polka
 
 import Syntax._
 
+import java.util.StringJoiner
 import scala.collection.mutable.Buffer
 
 object IR:
@@ -14,13 +15,20 @@ object IR:
    *
    * @param index the index of this name
    */
-  case class Name(index: Int)
+  case class Name(index: Int):
+    def pprint: String = s"#$index"
+
   /** Represents a binary operation between two operands */
   enum BinOp:
     /** Add the two operands using `+` */
     case Add
     /** Add the two operands using `*` */
     case Times
+
+    def pprint: String = this match
+      case Add => "+"
+      case Times => "*"
+
   /** Represents a unary operation against a single operand */
   enum UnaryOp:
     /** The operator `!` */
@@ -29,9 +37,20 @@ object IR:
     case BitNot
     /** The operator `-` */
     case Negate
+
+    def pprint: String = this match
+      case Not => "!"
+      case BitNot => "~"
+      case Negate => "-"
+
   enum Operand:
     case OnInt(value: Int)
     case OnName(name: Name)
+
+    def pprint: String = this match
+      case OnInt(int) => int.toString
+      case OnName(name) => name.pprint
+
   /** Represents a TAC statement */
   enum Statement:
     /** Represents a unary operation on a given variable */
@@ -42,6 +61,12 @@ object IR:
     case Initialize(name: Name, as: Int)
     /** Return the value in a variable */
     case Return(value: Name)
+
+    def pprint: String = this match
+      case ApplyUnary(to, op, single) => s"${to.pprint} = ${op.pprint}${single.pprint}"
+      case ApplyBin(to, op, l, r) => s"${to.pprint} = ${l.pprint} ${op.pprint} ${r.pprint}"
+      case Initialize(name, as) => s"${name.pprint} = $as"
+      case Return(value: Name) => s"ret ${value.pprint}"
 
   def from(program: IntMainReturn): IR = Generator().from(program)
 
@@ -116,4 +141,8 @@ object IR:
  *
  *  This is a linear IR, roughly corresponding to a Three-Address-Code
  */
-case class IR(statements: Vector[IR.Statement])
+case class IR(statements: Vector[IR.Statement]):
+  def pprint: String =
+    val buf = StringJoiner("\n")
+    statements.map(_.pprint).foreach(buf.add(_))
+    buf.toString

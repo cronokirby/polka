@@ -20,4 +20,3 @@ class IRTest:
       Statement.Return(Name(0))
     ))
     assertEquals(Right(expected), ir)
-

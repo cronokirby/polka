@@ -1,4 +1,4 @@
-import polka.{Assembler, Lexer, Parser}
+import polka.{Assembler, IR, Lexer, Parser}
 import java.io.{File, FileOutputStream}
 import scala.io.Source
 import scala.util.Using
@@ -17,6 +17,10 @@ object Main:
         case Left(err) => println(s"Parsing Error: $err $tokens")
         case Right(program) =>
           val out = outname match
-            case Some(file) => FileOutputStream(file)
-            case None => System.out
-          Assembler(out).generate(program)
+            case Some(file) if file.endsWith(".pir") =>
+              val prog = IR.from(program).pprint
+              val out = FileOutputStream(file)
+              out.write(prog.getBytes("UTF8"))
+              out.write('\n')
+            case Some(file) => Assembler(FileOutputStream(file)).generate(program)
+            case None => Assembler(System.out).generate(program)

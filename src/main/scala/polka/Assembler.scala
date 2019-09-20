@@ -57,22 +57,18 @@ object Assembler:
 
     private def binaryOp(op: String, source: String): Outputting[Unit] =
       writeln(s"\t${op}${size.asm}\t$source, $asm")
-    private def binaryOp(op: String, source: Int): Outputting[Unit] =
-      binaryOp(op, "$" + source)
-    private def binaryOp(op: String, source: Reg): Outputting[Unit] =
-      binaryOp(op, source.sized(size).asm)
+    private def binaryOp(op: String, source: Int | Reg): Outputting[Unit] = source match
+      case i: Int => binaryOp(op, "$" + i)
+      case r: Reg => binaryOp(op, r.sized(size).asm)
 
     private def unaryOp(op: String): Outputting[Unit] =
       writeln(s"\t${op}${size.asm}\t$asm")
 
-    def add(source: Int): Outputting[Unit] = binaryOp("add", source)
-    def add(source: Reg): Outputting[Unit] = binaryOp("add", source)
+    def add(source: Int | Reg): Outputting[Unit] = binaryOp("add", source)
 
-    def mul(source: Int): Outputting[Unit] = binaryOp("imul", source)
-    def mul(source: Reg): Outputting[Unit] = binaryOp("imul", source)
+    def mul(source: Int | Reg): Outputting[Unit] = binaryOp("imul", source)
 
-    def mov(source: Int): Outputting[Unit] = binaryOp("mov", source)
-    def mov(source: Reg): Outputting[Unit] = binaryOp("mov", source)
+    def mov(source: Int | Reg): Outputting[Unit] = binaryOp("mov", source)
 
     def movz(source: Register): Outputting[Unit] =
       writeln(s"\tmovz${source.size.asm}${size.asm}\t${source.asm}, $asm")
@@ -117,12 +113,8 @@ class Assembler(private val out: OutputStream):
     def applyOp(op: IR.BinOp, reg: Reg, right: Int | Reg): Unit =
       val regl = reg.sized(Size.L)
       op match
-      case IR.BinOp.Add => right match
-        case i: Int => regl.add(i)
-        case r: Reg => regl.add(r)
-      case IR.BinOp.Times => right match
-        case i: Int => regl.add(i)
-        case r: Reg => regl.add(r)
+      case IR.BinOp.Add => regl.add(right)
+      case IR.BinOp.Times => regl.mul(right)
 
     for s <- stmts do s match
       case IR.Statement.Initialize(name, value) =>

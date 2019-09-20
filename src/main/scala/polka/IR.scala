@@ -107,7 +107,7 @@ object IR:
         for operand <- rest do
           val oldName = Operand.OnName(name)
           name = nextName()
-          gen(Statement.ApplyBin(name, BinOp.Times, oldName, operand))
+          gen(Statement.ApplyBin(name, op, oldName, operand))
         Operand.OnName(name)
 
     private def primExpr(expr: PrimaryExpr): Operand =

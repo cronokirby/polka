@@ -22,7 +22,7 @@ class LexerTest:
       Token.CloseBrace,
     )
     assertEquals(Right(expected), items)
-  
+
   @Test
   def programsWithCommentsLex(): Unit =
     val program = "// stuff\n/* **stuff**/int"
@@ -56,3 +56,4 @@ class LexerTest:
     val program = "+ *"
     val items = Lexer.lex(program)
     val expected = Seq(Token.Plus, Token.Times)
+    assertEquals(Right(expected), items)

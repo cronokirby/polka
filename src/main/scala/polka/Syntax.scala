@@ -12,14 +12,14 @@ object Syntax:
     case Negate(value: PrimaryExpr)
     /** Represents the use of `()` to wrap an expression */
     case Parens(value: Add)
-  
+
   /** Contains a non empty sequence of things multiplied together */
   case class Multiply(exprs: Seq[PrimaryExpr])
 
   /** Contains a non empty sequence of things added together */
   case class Add(exprs: Seq[Multiply])
 
-  /** Represents a hardcoded `int main()` function. 
+  /** Represents a hardcoded `int main()` function.
    *
    *  As our representation of the language gets richer, we'll be able
    *  to avoid this hardcoded main function construct.

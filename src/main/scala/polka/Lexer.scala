@@ -47,7 +47,7 @@ object Lexer:
   def lex(program: String): Either[Seq[Error], Seq[Token]] = Lexer(program).run()
 
 private class Lexer(program: String):
-  import Lexer._ 
+  import Lexer._
 
   val source = program.iterator.buffered
 
@@ -65,7 +65,7 @@ private class Lexer(program: String):
   private def advance(): Option[Either[Error, Token]] =
     while source.hasNext do
       source.head match
-      case '(' => 
+      case '(' =>
         source.next()
         return Some(Right(Token.OpenParens))
       case ')' =>
@@ -129,7 +129,7 @@ private class Lexer(program: String):
     case "main" => Some(Token.Main)
     case "return" => Some(Token.Return)
     case _ => None
-  
+
   private def singleLineComment(): Unit =
     while source.hasNext && source.head != '\n' do source.next()
 

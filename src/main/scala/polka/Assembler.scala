@@ -29,7 +29,7 @@ object Assembler:
     case RAX
     case RBX
     case RCX
-    
+
     def sized(size: Size): Register = Register(this, size)
 
   /** This represents a reference to an actual register.
@@ -60,22 +60,22 @@ object Assembler:
       binaryOp(op, "$" + source)
     private def binaryOp(op: String, source: Reg): Outputting[Unit] =
       binaryOp(op, source.sized(size).asm)
-    
+
     private def unaryOp(op: String): Outputting[Unit] =
       writeln(s"\t${op}${size.asm}\t$asm")
 
     def add(source: Int): Outputting[Unit] = binaryOp("add", source)
     def add(source: Reg): Outputting[Unit] = binaryOp("add", source)
-    
+
     def mul(source: Int): Outputting[Unit] = binaryOp("imul", source)
     def mul(source: Reg): Outputting[Unit] = binaryOp("imul", source)
 
     def mov(source: Int): Outputting[Unit] = binaryOp("mov", source)
     def mov(source: Reg): Outputting[Unit] = binaryOp("mov", source)
-    
+
     def movz(source: Register): Outputting[Unit] =
       writeln(s"\tmovz${source.size.asm}${size.asm}\t${source.asm}, $asm")
-    
+
     def neg(): Outputting[Unit] = unaryOp("neg")
 
     def not(): Outputting[Unit] = unaryOp("not")
@@ -109,7 +109,7 @@ class Assembler(private val out: OutputStream):
     add(program.expr)
     Reg.RAX.sized(Size.Q).pop()
     writeln("\tret")
-  
+
   def add(expr: Add): Unit =
     val owned = Reg.RAX.sized(Size.L)
     val scratch = Reg.RCX
@@ -145,7 +145,7 @@ class Assembler(private val out: OutputStream):
       regl.test(reg)
       regl.sete()
       // Upgrade byte to full integer
-      reg.sized(Size.B).movz(regl)
+      regl.movz(reg.sized(Size.B))
       reg.sized(Size.Q).push()
     case PrimaryExpr.BitNot(theExpr) =>
       primExpr(theExpr)

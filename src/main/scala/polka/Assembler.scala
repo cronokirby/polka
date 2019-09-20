@@ -161,5 +161,5 @@ class Assembler(private val out: OutputStream):
         applyOp(op, owned, freed)
       case IR.Statement.Return(name) =>
         val reg = owners(name.index)
-        Reg.RAX.sized(Size.L).mov(reg)
+        if reg != Reg.RAX then Reg.RAX.sized(Size.L).mov(reg)
         writeln("\tret")

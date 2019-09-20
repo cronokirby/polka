@@ -120,17 +120,17 @@ object IR:
         case PrimaryExpr.Parens(expr) => (Left(expr), ops)
 
       val (root, ops) = go(expr, Vector.empty)
-      val rootOperand: Name = root match
-        case Right(int) => createInt(int)
-        case Left(expr) => add(expr) match
-          case Operand.OnInt(int) => createInt(int)
-          case Operand.OnName(name) => name
-      val name = ops.foldLeft(rootOperand):
-        (name, op) =>
+      val rootOperand: Operand = root match
+        case Right(int) => Operand.OnInt(int)
+        case Left(expr) => add(expr)
+      ops.foldLeft(rootOperand):
+        (operand, op) =>
           val newName = nextName()
-          gen(Statement.ApplyUnary(newName, op, name))
-          newName
-      Operand.OnName(name)
+          val right = operand match
+            case Operand.OnInt(int) => createInt(int)
+            case Operand.OnName(name) => name
+          gen(Statement.ApplyUnary(newName, op, right))
+          Operand.OnName(newName)
 
     private def createInt(int: Int): Name =
       val name = nextName()

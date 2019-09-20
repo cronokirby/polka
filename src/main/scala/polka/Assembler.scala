@@ -3,6 +3,7 @@ package polka
 import Syntax._
 
 import java.io.OutputStream
+import scala.collection.mutable.{Map, Stack}
 
 object Assembler:
   private type Outputting[T] = given OutputStream => T
@@ -103,65 +104,62 @@ class Assembler(private val out: OutputStream):
    *
    *  @param program the AST for our C program.
    */
-  def generate(program: IntMainReturn): Unit =
+  def generate(program: IR): Unit =
     writeln("\t.globl\tmain")
     writeln("main:")
-    add(program.expr)
-    Reg.RAX.sized(Size.Q).pop()
-    writeln("\tret")
+    statements(program.statements)
 
-  def add(expr: Add): Unit =
-    val owned = Reg.RAX.sized(Size.L)
-    val scratch = Reg.RCX
-    owned.mov(0)
-    expr.exprs.foreach:
-      m =>
-        multiply(m)
-        scratch.sized(Size.Q).pop()
-        owned.add(scratch)
-    // We need this if this expression is in ()
-    owned.sized(Size.Q).push()
+  private def statements(stmts: Vector[IR.Statement]): Unit =
+    import IR.Operand._
+    val freeRegisters = Stack(Reg.RAX, Reg.RBX, Reg.RCX)
+    val owners = Map[Int, Reg]()
 
-  def multiply(expr: Multiply): Unit =
-    val owned = Reg.RBX.sized(Size.L)
-    val scratch = Reg.RCX
-    owned.mov(1)
-    expr.exprs.foreach:
-      e =>
-        primExpr(e)
-        scratch.sized(Size.Q).pop()
-        owned.mul(scratch)
-    // We need this if this expression is in ()
-    owned.sized(Size.Q).push()
-
-  private def primExpr(theExpr: PrimaryExpr): Unit = theExpr match
-    case PrimaryExpr.Litteral(int) => litteral(int)
-    case PrimaryExpr.Not(theExpr) =>
-      primExpr(theExpr)
-      val reg = Reg.RAX
+    def applyOp(op: IR.BinOp, reg: Reg, right: Int | Reg): Unit =
       val regl = reg.sized(Size.L)
-      reg.sized(Size.Q).pop()
-      // If int == 0, set first byte of int to 1, else 0
-      regl.test(reg)
-      regl.sete()
-      // Upgrade byte to full integer
-      regl.movz(reg.sized(Size.B))
-      reg.sized(Size.Q).push()
-    case PrimaryExpr.BitNot(theExpr) =>
-      primExpr(theExpr)
-      val reg = Reg.RAX.sized(Size.Q)
-      reg.pop()
-      reg.sized(Size.L).not()
-      reg.push()
-    case PrimaryExpr.Negate(theExpr) =>
-      primExpr(theExpr)
-      val reg = Reg.RAX.sized(Size.Q)
-      reg.pop()
-      reg.sized(Size.L).neg()
-      reg.push()
-    case PrimaryExpr.Parens(a) => add(a)
+      op match
+      case IR.BinOp.Add => right match
+        case i: Int => regl.add(i)
+        case r: Reg => regl.add(r)
+      case IR.BinOp.Times => right match
+        case i: Int => regl.add(i)
+        case r: Reg => regl.add(r)
 
-  private def litteral(int: Int): Unit =
-    val arg = "$" + int
-    // NOTE: Abstract this?
-    writeln(s"\tpushq\t$arg")
+    for s <- stmts do s match
+      case IR.Statement.Initialize(name, value) =>
+        val reg = freeRegisters.pop()
+        owners += name.index -> reg
+        reg.sized(Size.L).mov(value)
+      case IR.Statement.ApplyUnary(to, op, arg) =>
+        val reg = owners(arg.index)
+        owners += to.index -> reg
+        op match
+        case IR.UnaryOp.BitNot => reg.sized(Size.L).not()
+        case IR.UnaryOp.Negate => reg.sized(Size.L).neg()
+        case IR.UnaryOp.Not =>
+          val regl = reg.sized(Size.L)
+          regl.test(reg)
+          regl.sete()
+          regl.movz(reg.sized(Size.B))
+      case IR.Statement.ApplyBin(to, op, OnInt(l), OnInt(r)) =>
+        val reg = freeRegisters.pop()
+        owners += to.index -> reg
+        reg.sized(Size.L).mov(l)
+        applyOp(op, reg, r)
+      case IR.Statement.ApplyBin(to, op, OnInt(int), OnName(source)) =>
+        val reg = owners(source.index)
+        owners += to.index -> reg
+        applyOp(op, reg, int)
+      case IR.Statement.ApplyBin(to, op, OnName(source), OnInt(int)) =>
+        val reg = owners(source.index)
+        owners += to.index -> reg
+        applyOp(op, reg, int)
+      case IR.Statement.ApplyBin(to, op, OnName(left), OnName(right)) =>
+        val owned = owners(left.index)
+        val freed = owners(right.index)
+        owners += to.index -> owned
+        freeRegisters.push(freed)
+        applyOp(op, owned, freed)
+      case IR.Statement.Return(name) =>
+        val reg = owners(name.index)
+        Reg.RAX.sized(Size.L).mov(reg)
+        writeln("\tret")

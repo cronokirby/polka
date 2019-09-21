@@ -92,23 +92,21 @@ object IR:
       IR(buf.toVector)
 
     private def add(expr: Add): Operand =
-      val operands = expr.exprs.map(multiply(_))
-      reduceOp(operands, BinOp.Add)
+      reduceOp(expr.exprs, BinOp.Add)(multiply(_))
 
     private def multiply(expr: Multiply): Operand =
-      val operands = expr.exprs.map(primExpr(_))
-      reduceOp(operands, BinOp.Times)
+      reduceOp(expr.exprs, BinOp.Times)(primExpr(_))
 
-    private def reduceOp(operands: Seq[Operand], op: BinOp): Operand =
-      if operands.length == 1 then
-        operands.head
+    private def reduceOp[E](exprs: Seq[E], op: BinOp)(makeOp: E => Operand): Operand =
+      val root = makeOp(exprs.head)
+      if exprs.length == 1 then
+        root
       else
-        val left = operands.head
-        val right = operands.tail.head
-        val rest = operands.tail.tail
-        var name = nextName()
-        gen(Statement.ApplyBin(name, op, left, right))
-        for operand <- rest do
+        var name = root match
+          case Operand.OnInt(int) => createInt(int)
+          case Operand.OnName(name) => name
+        for e <- exprs.tail do
+          val operand = makeOp(e)
           val oldName = Operand.OnName(name)
           name = nextName()
           gen(Statement.ApplyBin(name, op, oldName, operand))

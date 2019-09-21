@@ -150,9 +150,12 @@ class Assembler(private val out: OutputStream):
         val addRight = if right.isName then 1 else 0
         count + 1 - addLeft - addRight
       case _ => count
+    println(counts)
     val maxCount = counts.reduce(_ max _)
+    println(maxCount)
     val freeRegisters = Stack[AsmArg](Reg.RAX, Reg.RBX, Reg.RCX)
     val overflow = maxCount - freeRegisters.length
+    println(overflow)
     for stackIndex <- 0 to overflow do
       freeRegisters.append(Shifted(Reg.RSP, stackIndex * 8))
     sub(Size.Q, Constant(overflow * 8), Reg.RSP)

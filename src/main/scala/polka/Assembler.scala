@@ -158,8 +158,13 @@ class Assembler(private val out: OutputStream):
     println(overflow)
     for stackIndex <- 0 to overflow do
       freeRegisters.append(Shifted(Reg.RSP, stackIndex * 8))
-    sub(Size.Q, Constant(overflow * 8), Reg.RSP)
-    val ctx = StatementCtx(freeRegisters, Reg.R10, add(Size.Q, Constant(overflow * 8), Reg.RSP))
+    if overflow > 0 then
+      sub(Size.Q, Constant(overflow * 8), Reg.RSP)
+    val epilogue: Outputting[Unit] =
+      if overflow > 0 then
+        add(Size.Q, Constant(overflow * 8), Reg.RSP)
+      else ()
+    val ctx = StatementCtx(freeRegisters, Reg.R10, epilogue)
     stmts.foreach(statement(ctx, _))
 
   private def statement(ctx: StatementCtx, stmt: IR.Statement): Unit =

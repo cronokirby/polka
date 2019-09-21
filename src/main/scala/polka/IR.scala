@@ -46,6 +46,10 @@ object IR:
     case OnInt(value: Int)
     case OnName(name: Name)
 
+    def isName: Boolean = this match
+      case OnName(_) => true
+      case OnInt(_) => false
+
     def pprint: String = this match
       case OnInt(int) => int.toString
       case OnName(name) => name.pprint

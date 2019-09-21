@@ -27,6 +27,7 @@ object Assembler:
 
   private trait AsmArg:
     def asm(size: Size): String
+    def doesMath: Boolean = false
 
   private case class Constant(value: Int) extends AsmArg:
     def asm(size: Size) = "$" + value
@@ -36,6 +37,10 @@ object Assembler:
     case RAX
     case RBX
     case RCX
+    case RSP
+    case R10
+
+    override def doesMath = true
 
     def asm(size: Size) = (this, size) match
       case (RAX, Size.B) => "%al"
@@ -47,6 +52,35 @@ object Assembler:
       case (RCX, Size.B) => "%cl"
       case (RCX, Size.L) => "%ecx"
       case (RCX, Size.Q) => "%rcx"
+      case (RSP, Size.B) => "%spl"
+      case (RSP, Size.L) => "%esp"
+      case (RSP, Size.Q) => "%rsp"
+      case (R10, Size.B) => "%r10b"
+      case (R10, Size.L) => "%r10d"
+      case (R10, Size.Q) => "%r10"
+
+  private case class Shifted(reg: Reg, by: Int) extends AsmArg:
+    def asm(size: Size) = s"$by(${reg.asm(Size.Q)})"
+
+  private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit]):
+    private val owners = Map[Int, AsmArg]()
+
+    def getReg(name: IR.Name): AsmArg = owners(name.index)
+
+    def newReg(name: IR.Name): AsmArg =
+      val reg = free.pop()
+      owners += name.index -> reg
+      reg
+
+    def reuseReg(from: IR.Name, to: IR.Name): AsmArg =
+      val reg = owners(from.index)
+      owners += to.index -> reg
+      reg
+
+    def freeReg(from: IR.Name): AsmArg =
+      val freed = owners(from.index)
+      free.push(freed)
+      freed
 
   private def binaryOp(op: String, size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     writeln(s"\t${op}${size.asm}\t${source.asm(size)}, ${dest.asm(size)}")
@@ -56,6 +90,9 @@ object Assembler:
 
   private def add(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     binaryOp("add", size, source, dest)
+
+  private def sub(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    binaryOp("sub", size, source, dest)
 
   private def mul(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     binaryOp("imul", size, source, dest)
@@ -83,7 +120,7 @@ object Assembler:
     writeln(s"\tsete\t${dest.asm(Size.B)}")
 
   // This operator's destination is always a byte
-  private def test(size: Size, source: Reg, dest: Reg): Outputting[Unit] =
+  private def test(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     binaryOp("test", size, source, dest)
 
 /** A code generator, hooked into an output stream.
@@ -105,49 +142,66 @@ class Assembler(private val out: OutputStream):
     statements(program.statements)
 
   private def statements(stmts: Vector[IR.Statement]): Unit =
+    val counts = stmts.scanLeft(0):
+      (count, s) => s match
+      case IR.Statement.Initialize(_, _) => count + 1
+      case IR.Statement.ApplyBin(_, _, left, right) =>
+        val addLeft = if left.isName then 1 else 0
+        val addRight = if right.isName then 1 else 0
+        count + 1 - addLeft - addRight
+      case _ => count
+    val maxCount = counts.reduce(_ max _)
+    val freeRegisters = Stack[AsmArg](Reg.RAX, Reg.RBX, Reg.RCX)
+    val overflow = maxCount - freeRegisters.length
+    for stackIndex <- 0 to overflow do
+      freeRegisters.append(Shifted(Reg.RSP, stackIndex * 8))
+    sub(Size.Q, Constant(overflow * 8), Reg.RSP)
+    val ctx = StatementCtx(freeRegisters, Reg.R10, add(Size.Q, Constant(overflow * 8), Reg.RSP))
+    stmts.foreach(statement(ctx, _))
+
+  private def statement(ctx: StatementCtx, stmt: IR.Statement): Unit =
     import IR.Operand._
-    val freeRegisters = Stack(Reg.RAX, Reg.RBX, Reg.RCX)
-    val owners = Map[Int, Reg]()
 
-    def applyOp(op: IR.BinOp, source: AsmArg, dest: Reg): Unit = op match
-      case IR.BinOp.Add => add(Size.L, source, dest)
-      case IR.BinOp.Times => mul(Size.L, source, dest)
+    def applyOp(op: IR.BinOp, source: AsmArg, dest: AsmArg): Unit = op match
+      case IR.BinOp.Add =>
+        add(Size.L, source, dest)
+      case IR.BinOp.Times =>
+        if dest.doesMath then
+          mul(Size.L, source, dest)
+        else
+          mov(Size.Q, dest, ctx.scratch)
+          mul(Size.L, source, ctx.scratch)
+          mov(Size.Q, ctx.scratch, dest)
 
-    for s <- stmts do s match
-      case IR.Statement.Initialize(name, value) =>
-        val reg = freeRegisters.pop()
-        owners += name.index -> reg
-        mov(Size.L, Constant(value), reg)
-      case IR.Statement.ApplyUnary(to, op, arg) =>
-        val reg = owners(arg.index)
-        owners += to.index -> reg
-        op match
-        case IR.UnaryOp.BitNot => not(Size.L, reg)
-        case IR.UnaryOp.Negate => neg(Size.L, reg)
-        case IR.UnaryOp.Not =>
-          test(Size.L, reg, reg)
-          sete(reg)
-          movz(Size.B, Size.L, reg, reg)
-      case IR.Statement.ApplyBin(to, op, OnInt(l), OnInt(r)) =>
-        val reg = freeRegisters.pop()
-        owners += to.index -> reg
-        mov(Size.L, Constant(l), reg)
-        applyOp(op, Constant(r), reg)
-      case IR.Statement.ApplyBin(to, op, OnInt(int), OnName(source)) =>
-        val reg = owners(source.index)
-        owners += to.index -> reg
-        applyOp(op, Constant(int), reg)
-      case IR.Statement.ApplyBin(to, op, OnName(source), OnInt(int)) =>
-        val reg = owners(source.index)
-        owners += to.index -> reg
-        applyOp(op, Constant(int), reg)
-      case IR.Statement.ApplyBin(to, op, OnName(left), OnName(right)) =>
-        val owned = owners(left.index)
-        val freed = owners(right.index)
-        owners += to.index -> owned
-        freeRegisters.push(freed)
-        applyOp(op, freed, owned)
-      case IR.Statement.Return(name) =>
-        val reg = owners(name.index)
-        if reg != Reg.RAX then mov(Size.L, reg, Reg.RAX)
-        writeln("\tret")
+    stmt match
+    case IR.Statement.Initialize(name, value) =>
+      val reg = ctx.newReg(name)
+      mov(Size.L, Constant(value), reg)
+    case IR.Statement.ApplyUnary(to, op, arg) =>
+      val reg = ctx.reuseReg(arg, to)
+      op match
+      case IR.UnaryOp.BitNot => not(Size.L, reg)
+      case IR.UnaryOp.Negate => neg(Size.L, reg)
+      case IR.UnaryOp.Not =>
+        test(Size.L, reg, reg)
+        sete(reg)
+        movz(Size.B, Size.L, reg, reg)
+    case IR.Statement.ApplyBin(to, op, OnInt(l), OnInt(r)) =>
+      val reg = ctx.newReg(to)
+      mov(Size.L, Constant(l), reg)
+      applyOp(op, Constant(r), reg)
+    case IR.Statement.ApplyBin(to, op, OnInt(int), OnName(source)) =>
+      val reg = ctx.reuseReg(source, to)
+      applyOp(op, Constant(int), reg)
+    case IR.Statement.ApplyBin(to, op, OnName(source), OnInt(int)) =>
+      val reg = ctx.reuseReg(source, to)
+      applyOp(op, Constant(int), reg)
+    case IR.Statement.ApplyBin(to, op, OnName(left), OnName(right)) =>
+      val owned = ctx.reuseReg(left, to)
+      val freed = ctx.freeReg(right)
+      applyOp(op, freed, owned)
+    case IR.Statement.Return(name) =>
+      val reg = ctx.getReg(name)
+      if reg != Reg.RAX then mov(Size.L, reg, Reg.RAX)
+      ctx.epilogue
+      writeln("\tret")

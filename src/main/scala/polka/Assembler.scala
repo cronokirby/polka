@@ -25,67 +25,66 @@ object Assembler:
     case L extends Size("l")
     case Q extends Size("q")
 
+  private trait AsmArg:
+    def asm(size: Size): String
+
+  private case class Constant(value: Int) extends AsmArg:
+    def asm(size: Size) = "$" + value
+
   /** This enum holds all the possible registers */
-  private enum Reg:
+  private enum Reg extends AsmArg:
     case RAX
     case RBX
     case RCX
 
-    def sized(size: Size): Register = Register(this, size)
+    def asm(size: Size) = (this, size) match
+      case (RAX, Size.B) => "%al"
+      case (RAX, Size.L) => "%eax"
+      case (RAX, Size.Q) => "%rax"
+      case (RBX, Size.B) => "%bl"
+      case (RBX, Size.L) => "%ebx"
+      case (RBX, Size.Q) => "%rbx"
+      case (RCX, Size.B) => "%cl"
+      case (RCX, Size.L) => "%ecx"
+      case (RCX, Size.Q) => "%rcx"
 
-  /** This represents a reference to an actual register.
-   *
-   *  We can address a different section of a register based
-   *  on the size of data we're working with.
-   *
-   *  @param name the name of this register
-   *  @param size the size we're using this register with
-   */
-  private case class Register(name: Reg, size: Size):
-    def sized(newsize: Size): Register = Register(name, newsize)
+  private def binaryOp(op: String, size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    writeln(s"\t${op}${size.asm}\t${source.asm(size)}, ${dest.asm(size)}")
 
-    def asm: String = (name, size) match
-      case (Reg.RAX, Size.B) => "%al"
-      case (Reg.RAX, Size.L) => "%eax"
-      case (Reg.RAX, Size.Q) => "%rax"
-      case (Reg.RBX, Size.B) => "%bl"
-      case (Reg.RBX, Size.L) => "%ebx"
-      case (Reg.RBX, Size.Q) => "%rbx"
-      case (Reg.RCX, Size.B) => "%cl"
-      case (Reg.RCX, Size.L) => "%ecx"
-      case (Reg.RCX, Size.Q) => "%rcx"
+  private def unaryOp(op: String, size: Size, dest: AsmArg): Outputting[Unit] =
+    writeln(s"\t${op}${size.asm}\t${dest.asm(size)}")
 
-    private def binaryOp(op: String, source: String): Outputting[Unit] =
-      writeln(s"\t${op}${size.asm}\t$source, $asm")
-    private def binaryOp(op: String, source: Int | Reg): Outputting[Unit] = source match
-      case i: Int => binaryOp(op, "$" + i)
-      case r: Reg => binaryOp(op, r.sized(size).asm)
+  private def add(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    binaryOp("add", size, source, dest)
 
-    private def unaryOp(op: String): Outputting[Unit] =
-      writeln(s"\t${op}${size.asm}\t$asm")
+  private def mul(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    binaryOp("imul", size, source, dest)
 
-    def add(source: Int | Reg): Outputting[Unit] = binaryOp("add", source)
+  private def mov(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    binaryOp("mov", size, source, dest)
 
-    def mul(source: Int | Reg): Outputting[Unit] = binaryOp("imul", source)
+  private def movz(sourceSize: Size, destSize: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    writeln(s"\tmovz$sourceSize$destSize\t${source.asm(sourceSize)}, ${dest.asm(destSize)}")
 
-    def mov(source: Int | Reg): Outputting[Unit] = binaryOp("mov", source)
+  private def neg(size: Size, dest: AsmArg): Outputting[Unit] =
+    unaryOp("neg", size, dest)
 
-    def movz(source: Register): Outputting[Unit] =
-      writeln(s"\tmovz${source.size.asm}${size.asm}\t${source.asm}, $asm")
+  private def not(size: Size, dest: AsmArg): Outputting[Unit] =
+    unaryOp("not", size, dest)
 
-    def neg(): Outputting[Unit] = unaryOp("neg")
+  private def pop(dest: AsmArg): Outputting[Unit] =
+    unaryOp("pop", Size.Q, dest)
 
-    def not(): Outputting[Unit] = unaryOp("not")
+  private def push(dest: AsmArg): Outputting[Unit] =
+    unaryOp("push", Size.Q, dest)
 
-    def pop(): Outputting[Unit] = unaryOp("pop")
+  // This operator only works with bytes
+  private def sete(dest: AsmArg): Outputting[Unit] =
+    writeln(s"\tsete\t${dest.asm(Size.B)}")
 
-    def push(): Outputting[Unit] = unaryOp("push")
-
-    // This operator only works with bytes
-    def sete(): Outputting[Unit] = writeln(s"\tsete\t${sized(Size.B).asm}")
-
-    // This operator's destination is always a byte
-    def test(source: Reg): Outputting[Unit] = sized(Size.B).binaryOp("test", source)
+  // This operator's destination is always a byte
+  private def test(size: Size, source: Reg, dest: Reg): Outputting[Unit] =
+    binaryOp("test", size, source, dest)
 
 /** A code generator, hooked into an output stream.
  *
@@ -110,48 +109,45 @@ class Assembler(private val out: OutputStream):
     val freeRegisters = Stack(Reg.RAX, Reg.RBX, Reg.RCX)
     val owners = Map[Int, Reg]()
 
-    def applyOp(op: IR.BinOp, reg: Reg, right: Int | Reg): Unit =
-      val regl = reg.sized(Size.L)
-      op match
-      case IR.BinOp.Add => regl.add(right)
-      case IR.BinOp.Times => regl.mul(right)
+    def applyOp(op: IR.BinOp, source: AsmArg, dest: Reg): Unit = op match
+      case IR.BinOp.Add => add(Size.L, source, dest)
+      case IR.BinOp.Times => mul(Size.L, source, dest)
 
     for s <- stmts do s match
       case IR.Statement.Initialize(name, value) =>
         val reg = freeRegisters.pop()
         owners += name.index -> reg
-        reg.sized(Size.L).mov(value)
+        mov(Size.L, Constant(value), reg)
       case IR.Statement.ApplyUnary(to, op, arg) =>
         val reg = owners(arg.index)
         owners += to.index -> reg
         op match
-        case IR.UnaryOp.BitNot => reg.sized(Size.L).not()
-        case IR.UnaryOp.Negate => reg.sized(Size.L).neg()
+        case IR.UnaryOp.BitNot => not(Size.L, reg)
+        case IR.UnaryOp.Negate => neg(Size.L, reg)
         case IR.UnaryOp.Not =>
-          val regl = reg.sized(Size.L)
-          regl.test(reg)
-          regl.sete()
-          regl.movz(reg.sized(Size.B))
+          test(Size.L, reg, reg)
+          sete(reg)
+          movz(Size.B, Size.L, reg, reg)
       case IR.Statement.ApplyBin(to, op, OnInt(l), OnInt(r)) =>
         val reg = freeRegisters.pop()
         owners += to.index -> reg
-        reg.sized(Size.L).mov(l)
-        applyOp(op, reg, r)
+        mov(Size.L, Constant(l), reg)
+        applyOp(op, Constant(r), reg)
       case IR.Statement.ApplyBin(to, op, OnInt(int), OnName(source)) =>
         val reg = owners(source.index)
         owners += to.index -> reg
-        applyOp(op, reg, int)
+        applyOp(op, Constant(int), reg)
       case IR.Statement.ApplyBin(to, op, OnName(source), OnInt(int)) =>
         val reg = owners(source.index)
         owners += to.index -> reg
-        applyOp(op, reg, int)
+        applyOp(op, Constant(int), reg)
       case IR.Statement.ApplyBin(to, op, OnName(left), OnName(right)) =>
         val owned = owners(left.index)
         val freed = owners(right.index)
         owners += to.index -> owned
         freeRegisters.push(freed)
-        applyOp(op, owned, freed)
+        applyOp(op, freed, owned)
       case IR.Statement.Return(name) =>
         val reg = owners(name.index)
-        if reg != Reg.RAX then Reg.RAX.sized(Size.L).mov(reg)
+        if reg != Reg.RAX then mov(Size.L, reg, Reg.RAX)
         writeln("\tret")

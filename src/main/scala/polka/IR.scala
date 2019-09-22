@@ -1,6 +1,6 @@
 package polka
 
-import Syntax._
+import AST._
 
 import java.util.StringJoiner
 import scala.collection.mutable.Buffer
@@ -28,6 +28,11 @@ object IR:
       case Add => "+"
       case Times => "*"
 
+  object BinOp:
+    def fromAST(op: AST.BinOp): BinOp = op match
+      case AST.BinOp.Add => BinOp.Add
+      case AST.BinOp.Times => BinOp.Times
+
   /** Represents a unary operation against a single operand */
   enum UnaryOp:
     /** The operator `!` */
@@ -41,6 +46,12 @@ object IR:
       case Not => "!"
       case BitNot => "~"
       case Negate => "-"
+
+  object UnaryOp:
+    def fromAST(op: AST.UnaryOp): UnaryOp = op match
+      case AST.UnaryOp.Not => UnaryOp.Not
+      case AST.UnaryOp.BitNot => UnaryOp.BitNot
+      case AST.UnaryOp.Negate => UnaryOp.Negate
 
   enum Operand:
     case OnInt(value: Int)
@@ -85,20 +96,23 @@ object IR:
     private def gen(stmt: Statement): Unit = buf += stmt
 
     def from(program: IntMainReturn): IR =
-      val name = add(program.expr) match
+      val name = expr(program.expr) match
         case Operand.OnInt(int) => createInt(int)
         case Operand.OnName(name) => name
       gen(Statement.Return(name))
       IR(buf.toVector)
 
-    private def add(expr: Add): Operand =
-      reduceOp(expr.exprs, BinOp.Add)(multiply(_))
+    private def expr(e: Expr): Operand = e match
+      case Expr.Litteral(int) => Operand.OnInt(int)
+      case Expr.Binary(op, terms) => reduceOp(terms, BinOp.fromAST(op))
+      case Expr.Unary(op, term) =>
+        val name = createName(expr(term))
+        val next = nextName()
+        gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
+        Operand.OnName(next)
 
-    private def multiply(expr: Multiply): Operand =
-      reduceOp(expr.exprs, BinOp.Times)(primExpr(_))
-
-    private def reduceOp[E](exprs: Vector[E], op: BinOp)(makeOp: E => Operand): Operand =
-      val root = makeOp(exprs.head)
+    private def reduceOp(exprs: Vector[Expr], op: BinOp): Operand =
+      val root = expr(exprs.head)
       if exprs.length == 1 then
         root
       else
@@ -106,37 +120,20 @@ object IR:
           case Operand.OnInt(int) => createInt(int)
           case Operand.OnName(name) => name
         for e <- exprs.tail do
-          val operand = makeOp(e)
+          val operand = expr(e)
           val oldName = Operand.OnName(name)
           name = nextName()
           gen(Statement.ApplyBin(name, op, oldName, operand))
         Operand.OnName(name)
 
-    private def primExpr(expr: PrimaryExpr): Operand =
-      def go(expr: PrimaryExpr, ops: Vector[UnaryOp]): (Either[Add, Int], Vector[UnaryOp]) = expr match
-        case PrimaryExpr.Litteral(int) => (Right(int), ops)
-        case PrimaryExpr.Not(expr) => go(expr, UnaryOp.Not +: ops)
-        case PrimaryExpr.BitNot(expr) => go(expr, UnaryOp.BitNot +: ops)
-        case PrimaryExpr.Negate(expr) => go(expr, UnaryOp.Negate +: ops)
-        case PrimaryExpr.Parens(expr) => (Left(expr), ops)
-
-      val (root, ops) = go(expr, Vector.empty)
-      val rootOperand: Operand = root match
-        case Right(int) => Operand.OnInt(int)
-        case Left(expr) => add(expr)
-      ops.foldLeft(rootOperand):
-        (operand, op) =>
-          val newName = nextName()
-          val right = operand match
-            case Operand.OnInt(int) => createInt(int)
-            case Operand.OnName(name) => name
-          gen(Statement.ApplyUnary(newName, op, right))
-          Operand.OnName(newName)
-
     private def createInt(int: Int): Name =
       val name = nextName()
       gen(Statement.Initialize(name, int))
       name
+
+    private def createName(operand: Operand): Name = operand match
+      case Operand.OnInt(int) => createInt(int)
+      case Operand.OnName(name) => name
 
 /** Represents a series of statements, composing our IR
  *

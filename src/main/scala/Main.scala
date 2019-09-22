@@ -1,4 +1,4 @@
-import polka.{Assembler, IR, Lexer, Parser}
+import polka.{Assembler, AST, IR, Lexer, Parser}
 import java.io.{File, FileOutputStream}
 import scala.io.Source
 import scala.util.Using
@@ -13,7 +13,7 @@ object Main:
     source.close()
     Lexer.lex(program) match
       case Left(err) => println(s"Lexing Errors: $err")
-      case Right(tokens) => Parser.parse(tokens) match
+      case Right(tokens) => Parser.parse(tokens).map(AST.fromSyntax(_)) match
         case Left(err) => println(s"Parsing Error: $err $tokens")
         case Right(program) =>
           val out = outname match

@@ -57,3 +57,15 @@ class LexerTest:
     val items = Lexer.lex(program)
     val expected = Seq(Token.Plus, Token.Times)
     assertEquals(Right(expected), items)
+
+  @Test
+  def variablesLex(): Unit =
+    val program = "int x1 = y"
+    val items = Lexer.lex(program)
+    val expected = Seq(
+      Token.IntType,
+      Token.Identifier("x1"),
+      Token.Equals,
+      Token.Identifier("y")
+    )
+    assertEquals(Right(expected), items)

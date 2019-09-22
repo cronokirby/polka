@@ -33,8 +33,12 @@ object Lexer:
     case Plus
     /** The operator `*` */
     case Times
+    /** The operator `=` */
+    case Equals
     /** An integer litteral */
     case IntLitteral(value: Int)
+    /** An identifier */
+    case Identifier(value: String)
 
   /** Represents the type of errors the lexing stage will generate */
   case class Error(message: String)
@@ -101,10 +105,13 @@ private class Lexer(program: String):
       case '*' =>
         source.next()
         return Some(Right(Token.Times))
+      case '=' =>
+        source.next()
+        return Some(Right(Token.Equals))
       case c if c.isLetter =>
         val word = alphanumeric()
-        val matched = keyword(word)
-        return Some(matched.toRight(Error(s"Unkown keyword $word")))
+        val matched = keyword(word).getOrElse(Token.Identifier(word))
+        return Some(Right(matched))
       case i if i.isDigit =>
         val litteral = numeric()
         return Some(Right(Token.IntLitteral(litteral)))

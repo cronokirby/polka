@@ -97,7 +97,7 @@ object IR:
     private def multiply(expr: Multiply): Operand =
       reduceOp(expr.exprs, BinOp.Times)(primExpr(_))
 
-    private def reduceOp[E](exprs: Seq[E], op: BinOp)(makeOp: E => Operand): Operand =
+    private def reduceOp[E](exprs: Vector[E], op: BinOp)(makeOp: E => Operand): Operand =
       val root = makeOp(exprs.head)
       if exprs.length == 1 then
         root

@@ -10,7 +10,7 @@ class LexerTest:
   def basicProgramLexes(): Unit =
     val program = "int main() { return 2; }"
     val items = Lexer.lex(program)
-    val expected = Seq(
+    val expected = Vector(
       Token.IntType,
       Token.Main,
       Token.OpenParens,
@@ -27,21 +27,21 @@ class LexerTest:
   def programsWithCommentsLex(): Unit =
     val program = "// stuff\n/* **stuff**/int"
     val items = Lexer.lex(program)
-    val expected = Seq(Token.IntType)
+    val expected = Vector(Token.IntType)
     assertEquals(Right(expected), items)
 
   @Test
   def singleLitteralsLex(): Unit =
     val program = "34"
     val items = Lexer.lex(program)
-    val expected = Seq(Token.IntLitteral(34))
+    val expected = Vector(Token.IntLitteral(34))
     assertEquals(Right(expected), items)
 
   @Test
   def unaryOperatorsLex(): Unit =
     val program = "!10 ~10 -10"
     val items = Lexer.lex(program)
-    val expected = Seq(
+    val expected = Vector(
       Token.Exclamation,
       Token.IntLitteral(10),
       Token.Tilde,
@@ -55,14 +55,14 @@ class LexerTest:
   def operatorsLex(): Unit =
     val program = "+ *"
     val items = Lexer.lex(program)
-    val expected = Seq(Token.Plus, Token.Times)
+    val expected = Vector(Token.Plus, Token.Times)
     assertEquals(Right(expected), items)
 
   @Test
   def variablesLex(): Unit =
     val program = "int x1 = y"
     val items = Lexer.lex(program)
-    val expected = Seq(
+    val expected = Vector(
       Token.IntType,
       Token.Identifier("x1"),
       Token.Equals,

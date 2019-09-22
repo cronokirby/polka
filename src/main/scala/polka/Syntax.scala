@@ -1,6 +1,11 @@
 package polka
 
-/** This object holds classes related to our representation of C */
+/** This object holds classes related to the parser's representation of C
+ *
+ *  This is a direct representation of the syntax, and not necessarily
+ *  a convenient representation to have. We usually have a desugaring
+ *  step after this.
+ */
 object Syntax:
   enum PrimaryExpr:
     case Litteral(value: Int)
@@ -14,10 +19,10 @@ object Syntax:
     case Parens(value: Add)
 
   /** Contains a non empty sequence of things multiplied together */
-  case class Multiply(exprs: Seq[PrimaryExpr])
+  case class Multiply(exprs: Vector[PrimaryExpr])
 
   /** Contains a non empty sequence of things added together */
-  case class Add(exprs: Seq[Multiply])
+  case class Add(exprs: Vector[Multiply])
 
   /** Represents a hardcoded `int main()` function.
    *

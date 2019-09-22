@@ -48,23 +48,24 @@ object Lexer:
    * @param program the text we're trying to lex
    * @return either a sequence of [[Lexer.Token]], or [[Lexer.Error]]
    */
-  def lex(program: String): Either[Seq[Error], Seq[Token]] = Lexer(program).run()
+  def lex(program: String): Either[Vector[Error], Vector[Token]] = Lexer(program).run()
 
 private class Lexer(program: String):
   import Lexer._
 
   val source = program.iterator.buffered
 
-  def run(): Either[Seq[Error], Seq[Token]] =
-    val errors = ArrayBuffer[Error]()
-    val tokens = ArrayBuffer[Token]()
+  def run(): Either[Vector[Error], Vector[Token]] =
+    val errors = Vector.newBuilder[Error]
+    val tokens = Vector.newBuilder[Token]
     var done = false
     while !done do
       advance() match
       case Some(Right(token)) => tokens += token
       case Some(Left(error)) => errors += error
       case None => done = true
-    if !errors.isEmpty then Left(errors.toSeq) else Right(tokens.toSeq)
+    val theErrors = errors.result
+    if theErrors.isEmpty then Right(tokens.result) else Left(theErrors)
 
   private def advance(): Option[Either[Error, Token]] =
     while source.hasNext do

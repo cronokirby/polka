@@ -1,5 +1,7 @@
 package polka
 
+import Identifiers._
+
 /** This object holds classes related to the parser's representation of C
  *
  *  This is a direct representation of the syntax, and not necessarily
@@ -23,6 +25,32 @@ object Syntax:
 
   /** Contains a non empty sequence of things added together */
   case class Add(exprs: Vector[Multiply])
+
+  /** Represents the name of a declaration.
+   *
+   *  Roughly corresponds to the `direct-declarator` rule
+   */
+  enum Declarator:
+    /** Represents an identifier, e.g. `x` */
+    case Ident(name: Identifier)
+    /** Represents a wrapped identifier, e.g. `(x)` */
+    case Parens(decl: Declarator)
+
+  /** Represents a declaration after a type */
+  enum InitDeclarator:
+    /** A declaration without initialization, e.g. `x` */
+    case Uninitialized(decl: Declarator)
+    /** A declaration with initialization, e.g. `x = 2` */
+    case Initialized(decl: Declarator, as: Add)
+
+  /** Represents a statement in a block */
+  enum Statement:
+    /** An expression statement, e.g. `2 + 2;` */
+    case Expr(expr: Add)
+    /** Represents a declaration, e.g. `int x = 2, y;` */
+    case Declaration(declarators: Vector[InitDeclarator])
+    /** Represents a return statement, e.g. `return 2 +2;` */
+    case Return(expr: Add)
 
   /** Represents a hardcoded `int main()` function.
    *

@@ -1,13 +1,15 @@
 package polka.util
 
+import scala.collection.IndexedSeq
+
 object Cursor:
   /** Destructures an empty cursor, containing no more characters */
   object Empty:
-    def unapply(cursor: Cursor): Boolean = cursor.isDone
+    def unapply(cursor: Cursor[Any]): Boolean = cursor.isDone
 
   /** Destructures the first character, and the rest of the Cursor */
   object Cons:
-    def unapply(cursor: Cursor): Option[(Char, Cursor)] =
+    def unapply[T](cursor: Cursor[T]): Option[(T, Cursor[T])] =
       cursor.head.map(c => (c, cursor.advanced))
 
 /** Represents an advanceable cursor over a String.
@@ -19,12 +21,12 @@ object Cursor:
  *  @param source the source string this cursor refers to
  *  @param pos the initial position of this cursor in that source
  */
-class Cursor(private val source: String, private val pos: Int):
+class Cursor[+T](private val source: IndexedSeq[T], private val pos: Int):
   /** Construct a new Cursor at the start of a source
    *
    *  @param source the source this cursor refers to
    */
-  def this(source: String) = this(source, 0)
+  def this(source: IndexedSeq[T]) = this(source, 0)
 
   /** Check whether or not this Cursor still has available characters */
   def isDone: Boolean = pos < 0 || pos > source.length
@@ -35,18 +37,18 @@ class Cursor(private val source: String, private val pos: Int):
    *
    *  @return a cursor with one less character
    */
-  def advanced: Cursor = if isDone then this else Cursor(source, pos + 1)
+  def advanced: Cursor[T] = if isDone then this else Cursor(source, pos + 1)
 
   /** Attempt to get the first character of this Cursor
    *
    *  @return `None` for finished Cursors, otherwise a character
    */
-  def head: Option[Char] = if isDone then None else Some(source.charAt(pos))
+  def head: Option[T] = if isDone then None else Some(source(pos))
 
   private def slice = source.slice(pos, source.length)
 
   override def toString: String = s"Cursor($slice)"
 
   override def equals(that: Any) = that match
-    case that: Cursor => slice == that.slice
+    case that: Cursor[_] => slice == that.slice
     case _ => false

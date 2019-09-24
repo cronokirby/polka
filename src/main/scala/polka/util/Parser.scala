@@ -9,6 +9,10 @@ object Parser:
       case Error(msg) => Error(msg)
       case Ok(value, rest) => Ok(fun(value), rest)
 
+    def asEither: Either[String, A] = this match
+      case Ok(value, _) => Right(value)
+      case Error(msg) => Left(msg)
+
   enum Result[+T, +A]:
     case Consumed(reply: Reply[T, A])
     case Empty(reply: Reply[T, A])
@@ -16,6 +20,10 @@ object Parser:
     def map[B](fun: A => B): Result[T, B] = this match
       case Consumed(r) => Consumed(r.map(fun))
       case Empty(r) => Empty(r.map(fun))
+
+    def asEither: Either[String, A] = this match
+      case Consumed(r) => r.asEither
+      case Empty(r) => r.asEither
 
   def returning[T, A](value: A): Parser[T, A] =
     Parser(cursor => Result.Empty(Reply.Ok(value, cursor)))

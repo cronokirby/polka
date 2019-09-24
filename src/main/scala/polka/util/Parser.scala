@@ -17,14 +17,14 @@ object Parser:
       case Consumed(r) => Consumed(r.map(fun))
       case Empty(r) => Empty(r.map(fun))
 
-  def returning[A](value: A): Parser[_, A] =
+  def returning[T, A](value: A): Parser[T, A] =
     Parser(cursor => Result.Empty(Reply.Ok(value, cursor)))
 
   def satisfy[T](predicate: T => Boolean): Parser[T, T] =
     val fun = input: Cursor[T] => input match
-    case Cursor.Empty => Result.Empty(Reply.Error("Empty input"))
     case Cursor.Cons(c, rest) if predicate(c) => Result.Consumed(Reply.Ok(c, rest))
     case Cursor.Cons(c, _) => Result.Empty(Reply.Error(s"Character $c failed test"))
+    case _ => Result.Empty(Reply.Error("Empty input"))
     Parser(fun)
 
 class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
@@ -61,3 +61,10 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       case Result.Consumed(Reply.Error(msg)) => Result.Empty(Reply.Error(msg))
       case other => other
     Parser(fun)
+
+  def many1(): Parser[T, Vector[A]] =
+    for
+      x <- this
+      xs <- many1() | returning(Vector())
+    yield
+      x +: xs

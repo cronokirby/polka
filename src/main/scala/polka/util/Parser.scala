@@ -57,6 +57,14 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       Result.Consumed(reply)
     Parser(fun)
 
+  def ~>[B](that: Parser[T, B]): Parser[T, B] = flatMap(_ => that)
+
+  def <~[B](that: Parser[T, B]): Parser[T, A] =
+    for
+      a <- this
+      _ <- that
+    yield a
+
   def |(that: Parser[T, A]): Parser[T, A] =
     val fun = input: Cursor[T] => run(input) match
       case Result.Empty(Reply.Error(msg)) => that.run(input)
@@ -76,8 +84,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
     for
       x <- this
       xs <- many1() | returning(Vector())
-    yield
-      x +: xs
+    yield x +: xs
 
   def manyTill(token: T): Parser[T, Vector[A]] =
     def go: Parser[T, Vector[A]] =

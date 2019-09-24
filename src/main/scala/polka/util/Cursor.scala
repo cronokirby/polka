@@ -29,7 +29,7 @@ class Cursor[+T](private val source: IndexedSeq[T], private val pos: Int):
   def this(source: IndexedSeq[T]) = this(source, 0)
 
   /** Check whether or not this Cursor still has available characters */
-  def isDone: Boolean = pos < 0 || pos > source.length
+  def isDone: Boolean = pos < 0 || pos >= source.length
 
   /** Return a new Cursor advanced by a single character
    *

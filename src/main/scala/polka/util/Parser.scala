@@ -39,7 +39,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       case Reply.Ok(value, rest) => f(value).run(rest)
       case Reply.Error(msg) => Result.Empty(Reply.Error(msg))
     case Result.Consumed(r) =>
-      val reply = r match
+      lazy val reply = r match
       case Reply.Ok(value, rest) => f(value).run(rest) match
         case Result.Consumed(r) => r
         case Result.Empty(r) => r
@@ -56,3 +56,8 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       case consumed => consumed
     Parser(fun)
 
+  def tried(): Parser[T, A] =
+    val fun = input: Cursor[T] => run(input) match
+      case Result.Consumed(Reply.Error(msg)) => Result.Empty(Reply.Error(msg))
+      case other => other
+    Parser(fun)

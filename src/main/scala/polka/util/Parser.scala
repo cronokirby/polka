@@ -27,6 +27,8 @@ object Parser:
     case _ => Result.Empty(Reply.Error("Empty input"))
     Parser(fun)
 
+  def litt[T](token: T): Parser[T, T] = satisfy(_ == token)
+
 class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
   import Parser._
 
@@ -68,3 +70,10 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       xs <- many1() | returning(Vector())
     yield
       x +: xs
+
+  def manyTill(token: T): Parser[T, Vector[A]] =
+    def go: Parser[T, Vector[A]] =
+      val tryEnd = litt(token).map(_ => Vector[A]())
+      val tryNext = for x <- this; xs <- go yield x +: xs
+      tryEnd | tryNext
+    go

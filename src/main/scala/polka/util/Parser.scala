@@ -47,7 +47,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       Result.Consumed(reply)
     Parser(fun)
 
-  def or(that: Parser[T, A]): Parser[T, A] =
+  def |(that: Parser[T, A]): Parser[T, A] =
     val fun = input: Cursor[T] => run(input) match
       case Result.Empty(Reply.Error(msg)) => that.run(input)
       case Result.Empty(ok) => that.run(input) match

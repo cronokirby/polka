@@ -51,7 +51,7 @@ class ParserTest
     val program = "int main() { int x; }"
     val expected = IntMain(Vector(
       Statement.Declaration(Vector(
-        InitDeclarator.Uninitialized(Declarator.Ident(Identifier("x")))
+        InitDeclarator.Uninitialized(Declarator(Identifier("x")))
       ))
     ))
     assertEquals(Right(expected), parse(program))
@@ -62,7 +62,54 @@ class ParserTest
     val expr = Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2)))))
     val expected = IntMain(Vector(
       Statement.Declaration(Vector(
-        InitDeclarator.Initialized(Declarator.Ident(Identifier("x")), expr)
+        InitDeclarator.Initialized(Declarator(Identifier("x")), expr)
       ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `multiple empty declarations parse`(): Unit =
+    val program = "int main() { int x, y; }"
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Uninitialized(Declarator(Identifier("x"))),
+        InitDeclarator.Uninitialized(Declarator(Identifier("y")))
+      ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `multiple mixed declarations parse`(): Unit =
+    val program = "int main() { int x, y, z = 2; }"
+    val expr = Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2)))))
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Uninitialized(Declarator(Identifier("x"))),
+        InitDeclarator.Uninitialized(Declarator(Identifier("y"))),
+        InitDeclarator.Initialized(Declarator(Identifier("z")), expr)
+      ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `multiple declarations with parens work`(): Unit =
+    val program = "int main() { int (x), (y), (z) = 2; }"
+    val expr = Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2)))))
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Uninitialized(Declarator(Identifier("x"))),
+        InitDeclarator.Uninitialized(Declarator(Identifier("y"))),
+        InitDeclarator.Initialized(Declarator(Identifier("z")), expr)
+      ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `multiple statements can be parsed`(): Unit =
+    val program = "int main() { return 0; return 0; }"
+    val expr = Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(0)))))
+    val expected = IntMain(Vector(
+      Statement.Return(expr),
+      Statement.Return(expr)
     ))
     assertEquals(Right(expected), parse(program))

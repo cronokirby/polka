@@ -57,7 +57,7 @@ object Parser
 
   private def declarator: P[Token, Declarator] =
     def raw = P.partial[Token, Declarator]:
-      case Token.Ident(i) => Declarator.Ident(i)
+      case Token.Ident(i) => Declarator(i)
     def wrapped = P.litt(Token.OpenParens) ~> declarator <~ P.litt(Token.CloseParens)
     wrapped | raw
 

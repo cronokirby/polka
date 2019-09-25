@@ -30,11 +30,7 @@ object Syntax
    *
    *  Roughly corresponds to the `direct-declarator` rule
    */
-  enum Declarator
-    /** Represents an identifier, e.g. `x` */
-    case Ident(name: Identifier)
-    /** Represents a wrapped identifier, e.g. `(x)` */
-    case Parens(decl: Declarator)
+  case class Declarator(name: Identifier)
 
   /** Represents a declaration after a type */
   enum InitDeclarator

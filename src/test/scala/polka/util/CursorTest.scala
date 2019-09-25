@@ -25,15 +25,9 @@ class IRTest:
     assertEquals(Some('e'), Cursor("hello").advanced.head)
 
   @Test
-  def `destructuring works with Empty`(): Unit =
-    Cursor("") match
-    case Cursor.Empty => ()
-    case Cursor.Cons(_, _) => assertFail("Expected empty to match")
-
-  @Test
   def `destructuring works with Cons`(): Unit =
     Cursor("a") match
-    case Cursor.Empty => ()
+    case Cursor.Empty() => ()
     case Cursor.Cons(c, cursor) =>
       assertEquals('a', c)
       assertTrue(cursor.isDone)

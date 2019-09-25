@@ -37,6 +37,9 @@ object Parser:
 
   def litt[T](token: T): Parser[T, T] = satisfy(_ == token)
 
+  def partial[T, A](f: PartialFunction[T, A]): Parser[T, A] =
+    satisfy((t: T) => f.isDefinedAt(t)).map(f)
+
 class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
   import Parser._
 
@@ -57,7 +60,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       Result.Consumed(reply)
     Parser(fun)
 
-  def ~>[B](that: Parser[T, B]): Parser[T, B] = flatMap(_ => that)
+  def ~>[B](that: => Parser[T, B]): Parser[T, B] = flatMap(_ => that)
 
   def <~[B](that: Parser[T, B]): Parser[T, A] =
     for

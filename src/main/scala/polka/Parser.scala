@@ -1,6 +1,7 @@
 package polka
 
 import Lexer.Token
+import polka.util.{Cursor, Parser => P}
 import Syntax._
 
 import scala.annotation.tailrec
@@ -13,66 +14,34 @@ object Parser:
    * @param tokens the series of tokens we've lexed.
    * @return either an error in parsing, or the AST
    */
-  def parse(tokens: Iterable[Token]): Either[Error, IntMainReturn] = Parser(tokens).run()
+  def parse(tokens: IndexedSeq[Token]): Either[Error, IntMainReturn] =
+    val cursor = Cursor(tokens)
+    intMainReturn.run(cursor).asEither.left.map(Error(_))
 
-private class Parser(tokens: Iterable[Token]):
-  import Parser._
-
-  val iter = tokens.iterator.buffered
-
-  def run(): Either[Error, IntMainReturn] =
+  private def intMainReturn: P[Token, IntMainReturn] =
     for
-      _ <- eat(Token.IntType)
-      _ <- eat(Token.Main)
-      _ <- eat(Token.OpenParens)
-      _ <- eat(Token.CloseParens)
-      _ <- eat(Token.OpenBrace)
-      _ <- eat(Token.Return)
-      a <- add()
-      _ <- eat(Token.SemiColon)
-      _ <- eat(Token.CloseBrace)
+      _ <- P.litt(Token.IntType)
+      _ <- P.litt(Token.Main)
+      _ <- P.litt(Token.OpenParens)
+      _ <- P.litt(Token.CloseParens)
+      _ <- P.litt(Token.OpenBrace)
+      _ <- P.litt(Token.Return)
+      a <- add1
+      _ <- P.litt(Token.SemiColon)
+      _ <- P.litt(Token.CloseBrace)
     yield
       IntMainReturn(a)
 
-  private def eat(token: Lexer.Token): Either[Error, Unit] = iter.nextOption match
-    case Some(t) if t == token => Right(())
-    case Some(t) => Left(Error(s"Expected $token but got $t"))
-    case None => Left(Error("Unexpected end of input"))
+  private def add1: P[Token, Add] = multiply1.sepBy1(Token.Plus).map(Add(_))
 
-  private def add(): Either[Error, Add] =
-    def extra(buf: Vector[Multiply]): Either[Error, Vector[Multiply]] = iter.headOption match
-      case Some(Token.Plus) =>
-        iter.next()
-        multiply().flatMap(m => extra(buf :+ m))
-      case _ => Right(buf)
-    for
-      m <- multiply()
-      ms <- extra(Vector())
-    yield
-      Add(m +: ms)
+  private def multiply1: P[Token, Multiply] = primaryExpr1.sepBy1(Token.Times).map(Multiply(_))
 
-  private def multiply(): Either[Error, Multiply] =
-    def extra(buf: Vector[PrimaryExpr]): Either[Error, Vector[PrimaryExpr]] = iter.headOption match
-      case Some(Token.Times) =>
-        iter.next()
-        primaryExpr().flatMap(m => extra(buf :+ m))
-      case _ => Right(buf)
-    for
-      e <- primaryExpr()
-      es <- extra(Vector())
-    yield
-      Multiply(e +: es)
-
-  private def primaryExpr(): Either[Error, PrimaryExpr] = iter.nextOption match
-    case Some(Token.IntLitteral(i)) => Right(PrimaryExpr.Litteral(i))
-    case Some(Token.Exclamation) => primaryExpr().map(PrimaryExpr.Not(_))
-    case Some(Token.Tilde) => primaryExpr().map(PrimaryExpr.BitNot(_))
-    case Some(Token.Minus) => primaryExpr().map(PrimaryExpr.Negate(_))
-    case Some(Token.OpenParens) =>
-      for
-        a <- add()
-        _ <- eat(Token.CloseParens)
-      yield
-        PrimaryExpr.Parens(a)
-    case Some(t) => Left(Error(s"Expected expression, found $t"))
-    case None => Left(Error("Unexpected end of input"))
+  private def primaryExpr1: P[Token, PrimaryExpr] =
+    import PrimaryExpr._
+    def higherExpr = P.litt(Token.OpenParens) ~> add1.map(Parens(_)) <~ P.litt(Token.CloseParens)
+    def not = P.litt(Token.Exclamation) ~> primaryExpr1.map(Not(_))
+    def bitNot = P.litt(Token.Tilde) ~> primaryExpr1.map(BitNot(_))
+    def negate = P.litt(Token.Minus) ~> primaryExpr1.map(Negate(_))
+    def litteral = P.partial[Token, PrimaryExpr]:
+      case Token.IntLitteral(i) => Litteral(i)
+    higherExpr | not | bitNot | negate | litteral

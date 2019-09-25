@@ -31,7 +31,7 @@ object Parser:
   def satisfy[T](predicate: T => Boolean): Parser[T, T] =
     val fun = input: Cursor[T] => input match
     case Cursor.Cons(c, rest) if predicate(c) => Result.Consumed(Reply.Ok(c, rest))
-    case Cursor.Cons(c, _) => Result.Empty(Reply.Error(s"Character $c failed test"))
+    case Cursor.Cons(c, _) => Result.Empty(Reply.Error(s"Token $c failed test"))
     case _ => Result.Empty(Reply.Error("Empty input"))
     Parser(fun)
 
@@ -80,6 +80,10 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       case other => other
     Parser(fun)
 
+  def many(): Parser[T, Vector[A]] =
+    def continued = for x <- this; xs <- many() yield x +: xs
+    continued | returning(Vector())
+
   def many1(): Parser[T, Vector[A]] =
     for
       x <- this
@@ -92,3 +96,9 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
       val tryNext = for x <- this; xs <- go yield x +: xs
       tryEnd | tryNext
     go
+
+  def sepBy1(sep: T): Parser[T, Vector[A]] =
+    for
+      x <- this
+      xs <- (litt(sep) ~> this).many()
+    yield x +: xs

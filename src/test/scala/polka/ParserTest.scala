@@ -1,5 +1,6 @@
 package polka
 
+import Identifiers._
 import Syntax._
 
 import org.junit.Test
@@ -43,4 +44,25 @@ class ParserTest
         )))
       ))
     )))))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `single declarations parse`(): Unit =
+    val program = "int main() { int x; }"
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Uninitialized(Declarator.Ident(Identifier("x")))
+      ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `single declarations with initialization parse`(): Unit =
+    val program = "int main() { int x = 2; }"
+    val expr = Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2)))))
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Initialized(Declarator.Ident(Identifier("x")), expr)
+      ))
+    ))
     assertEquals(Right(expected), parse(program))

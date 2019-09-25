@@ -50,9 +50,9 @@ object Parser
         a <- add
       yield
         InitDeclarator.Initialized(d, a)
-    // We need lookahead on uninitialized, to distinguish the following:
+    // We need lookahead on initialized, to distinguish the following:
     // `((x)) = ...` vs `((x));`
-    val initDeclarator = uninitialized.tried() | initialized
+    val initDeclarator = initialized.tried() | uninitialized
     initDeclarator.sepBy1(Token.Comma) <~ P.litt(Token.SemiColon)
 
   private def declarator: P[Token, Declarator] =

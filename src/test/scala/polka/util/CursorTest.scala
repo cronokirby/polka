@@ -9,7 +9,7 @@ class IRTest
     assertTrue(Cursor("").isDone)
 
   @Test
-  def `empty.advanced is still done`(): Unit =
+  def `empty advanced is still done`(): Unit =
     assertTrue(Cursor("").advanced.isDone)
 
   @Test

@@ -66,7 +66,6 @@ object AST
     decls.map:
       case Syntax.InitDeclarator.Uninitialized(decl) => Statement.Declaration(decl.name, None)
       case Syntax.InitDeclarator.Initialized(decl, init) => Statement.Declaration(decl.name, Some(fromAdd(init)))
-    fromDeclarators(decls)
 
   private def fromAdd(add: Syntax.Add): Expr = add.exprs match
     case Vector(one) => fromMultiply(one)

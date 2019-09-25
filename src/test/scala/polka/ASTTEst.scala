@@ -1,6 +1,7 @@
 package polka
 
 import AST._
+import Identifiers._
 
 import org.junit.Test
 import org.junit.Assert._
@@ -53,5 +54,23 @@ class ASTTest
           )
         )
       ))
+    ))
+    assertEquals(Right(expected), ast(program))
+
+  @Test
+  def `AST handles single declarations`(): Unit =
+    val program = "int main() { int x; int y = 2; }"
+    val expected = IntMain(Vector(
+      Statement.Declaration(Identifier("x"), None),
+      Statement.Declaration(Identifier("y"), Some(Expr.Litteral(2)))
+    ))
+    assertEquals(Right(expected), ast(program))
+
+  @Test
+  def `AST handles multiple declarations`(): Unit =
+    val program = "int main() { int x, y = 2; }"
+     val expected = IntMain(Vector(
+      Statement.Declaration(Identifier("x"), None),
+      Statement.Declaration(Identifier("y"), Some(Expr.Litteral(2)))
     ))
     assertEquals(Right(expected), ast(program))

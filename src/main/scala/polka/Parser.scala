@@ -18,10 +18,6 @@ object Parser
     val cursor = Cursor(tokens)
     intMainReturn.run(cursor).asEither.left.map(Error(_))
 
-  def oldParse(tokens: IndexedSeq[Token]): Either[Error, IntMainReturn] = parse(tokens) match
-    case Right(IntMain(Vector(Statement.Return(e)))) => Right(IntMainReturn(e))
-    case bad => Left(Error(s"Expression $bad isn't simple enough to fit old syntax"))
-
   private def intMainReturn: P[Token, IntMain] =
     for
       _ <- P.litt(Token.IntType)

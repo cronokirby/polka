@@ -39,14 +39,22 @@ object AST
     /** An integer litteral, e.g. `12` */
     case Litteral(value: Int)
 
+  /** Represents a statement that might have some effect
+   *
+   *  The body of our main function is composed of a series of these.
+   */
   enum Statement
+    /** Declare a new variable (always int, for now) with an optional value */
     case Declaration(name: Identifier, init: Option[Expr])
+    /** A statement that evaluates an expression */
     case ExprS(expr: Expr)
+    /** A statement returning a value from the function it's contained inside of */
     case Return(expr: Expr)
 
   /** Represents a hardcoded `int main()` function */
   case class IntMain(statements: Vector[Statement])
 
+  @deprecated
   case class IntMainReturn(expr: Expr)
 
   /** Convert the parser's representation of syntax to this AST */

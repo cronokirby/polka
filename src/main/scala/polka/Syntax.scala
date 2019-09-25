@@ -8,8 +8,8 @@ import Identifiers._
  *  a convenient representation to have. We usually have a desugaring
  *  step after this.
  */
-object Syntax:
-  enum PrimaryExpr:
+object Syntax
+  enum PrimaryExpr
     case Litteral(value: Int)
     /** Represents the use of logical negation `!` */
     case Not(value: PrimaryExpr)
@@ -30,21 +30,21 @@ object Syntax:
    *
    *  Roughly corresponds to the `direct-declarator` rule
    */
-  enum Declarator:
+  enum Declarator
     /** Represents an identifier, e.g. `x` */
     case Ident(name: Identifier)
     /** Represents a wrapped identifier, e.g. `(x)` */
     case Parens(decl: Declarator)
 
   /** Represents a declaration after a type */
-  enum InitDeclarator:
+  enum InitDeclarator
     /** A declaration without initialization, e.g. `x` */
     case Uninitialized(decl: Declarator)
     /** A declaration with initialization, e.g. `x = 2` */
     case Initialized(decl: Declarator, as: Add)
 
   /** Represents a statement in a block */
-  enum Statement:
+  enum Statement
     /** An expression statement, e.g. `2 + 2;` */
     case Expr(expr: Add)
     /** Represents a declaration, e.g. `int x = 2, y;` */

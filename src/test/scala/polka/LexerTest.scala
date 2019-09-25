@@ -5,7 +5,7 @@ import Lexer.Token
 import org.junit.Test
 import org.junit.Assert._
 
-class LexerTest:
+class LexerTest
   @Test
   def basicProgramLexes(): Unit =
     val program = "int main() { return 2; }"

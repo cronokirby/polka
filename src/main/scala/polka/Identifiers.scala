@@ -1,10 +1,10 @@
 package polka
 
-object Identifiers:
+object Identifiers
   /** Represents some kind, of name, e.g. the `x` in `int x` */
   opaque type Identifier = String
 
-  object Identifier:
+  object Identifier
     /** Create a new Identifier given a string holding the same content
      *
      *  @param name the string holding the name for the new Identifier

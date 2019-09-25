@@ -5,7 +5,7 @@ import AST._
 import org.junit.Test
 import org.junit.Assert._
 
-class ASTTest:
+class ASTTest
   def ast(program: String): Either[Parser.Error, IntMainReturn] =
     Lexer.lex(program) match
       case Left(errors) => throw AssertionError(s"Lexing Errors: $errors")

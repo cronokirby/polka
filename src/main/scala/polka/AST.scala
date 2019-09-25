@@ -11,16 +11,16 @@ package polka
  *  `Binary(Times, Vector(3, Binary(Add, Vector(1, 1))))`, which captures the
  *  order of operations correctly.
  */
-object AST:
+object AST
   /** This represents a type of binary operation between different terms */
-  enum BinOp:
+  enum BinOp
     /** Represents addition `+` */
     case Add
     /** Represents multiplication `*` */
     case Times
 
   /** Represents a type of unary operation on a term */
-  enum UnaryOp:
+  enum UnaryOp
     /** Represents the bitwise not operator `~` */
     case BitNot
     /** Represents the arithmetic negation operator `-` */
@@ -29,7 +29,7 @@ object AST:
     case Not
 
   /** Represents an expression evaluating to a value */
-  enum Expr:
+  enum Expr
     /** A binary operator between terms, e.g. `_ + _ + _` */
     case Binary(op: BinOp, terms: Vector[Expr])
     /** A unary operator on a given term, e.g. `!_` */

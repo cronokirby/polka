@@ -1,8 +1,8 @@
 package polka.util
 
-object Parser:
+object Parser
   /** Represents the result of parsing */
-  enum Reply[+T, +A]:
+  enum Reply[+T, +A]
     /** Represents a successful parser, with the remaining input */
     case Ok(value: A, rest: Cursor[T])
     /** Represents a parse failure with a given error mesage */
@@ -33,7 +33,7 @@ object Parser:
    *  consuming input, we don't do any backtracking. We also use the consumption
    *  information with successful parsers, in order to select the longest match.
    */
-  enum Result[+T, +A]:
+  enum Result[+T, +A]
     /** We've consumed input to produce this reply */
     case Consumed(reply: Reply[T, A])
     /** We haven't consumed any input to produce this reply */
@@ -72,7 +72,7 @@ object Parser:
    *  @return a parser that will succeed if `predicate(token)` is true
    */
   def satisfy[T](predicate: T => Boolean): Parser[T, T] =
-    val fun = input: Cursor[T] => input match
+    val fun = (input: Cursor[T]) => input match
     case Cursor.Cons(c, rest) if predicate(c) => Result.Consumed(Reply.Ok(c, rest))
     case Cursor.Cons(c, _) => Result.Empty(Reply.Error(s"Token $c failed test"))
     case _ => Result.Empty(Reply.Error("Empty input"))
@@ -94,7 +94,7 @@ object Parser:
   def partial[T, A](f: PartialFunction[T, A]): Parser[T, A] =
     satisfy((t: T) => f.isDefinedAt(t)).map(f)
 
-class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
+class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A])
   import Parser._
 
   /** Map a function over the result of a parser
@@ -111,7 +111,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
    *  @return a new parser sequencing this parser and the following
    */
   def flatMap[B](f: A => Parser[T, B]): Parser[T, B] =
-    val fun = input: Cursor[T] => run(input) match
+    val fun = (input: Cursor[T]) => run(input) match
     case Result.Empty(r) => r match
       case Reply.Ok(value, rest) => f(value).run(rest)
       case Reply.Error(msg) => Result.Empty(Reply.Error(msg))
@@ -153,7 +153,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
    *  @return a parser that matches this or that
    */
   def |(that: Parser[T, A]): Parser[T, A] =
-    val fun = input: Cursor[T] => run(input) match
+    val fun = (input: Cursor[T])=> run(input) match
       case Result.Empty(Reply.Error(msg)) => that.run(input)
       case Result.Empty(ok) => that.run(input) match
         case Result.Empty(_) => Result.Empty(ok)
@@ -169,7 +169,7 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A]):
    *  than one token in advance.
    */
   def tried(): Parser[T, A] =
-    val fun = input: Cursor[T] => run(input) match
+    val fun = (input: Cursor[T]) => run(input) match
       case Result.Consumed(Reply.Error(msg)) => Result.Empty(Reply.Error(msg))
       case other => other
     Parser(fun)

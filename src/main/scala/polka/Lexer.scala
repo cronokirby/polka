@@ -4,9 +4,9 @@ import scala.collection.BufferedIterator
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
 
-object Lexer:
+object Lexer
   /** A token produced when lexing the C language. */
-  enum Token:
+  enum Token
     /** A hardcoded `int` type */
     case IntType
     /** The hardcoded `main` function name */
@@ -50,7 +50,7 @@ object Lexer:
    */
   def lex(program: String): Either[Vector[Error], Vector[Token]] = Lexer(program).run()
 
-private class Lexer(program: String):
+private class Lexer(program: String)
   import Lexer._
 
   val source = program.iterator.buffered

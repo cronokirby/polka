@@ -6,7 +6,7 @@ import Syntax._
 
 import scala.annotation.tailrec
 
-object Parser:
+object Parser
   case class Error(message: String)
 
   /** Given a sequence of tokens, try and parse that program into an AST

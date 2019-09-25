@@ -5,12 +5,12 @@ import Syntax._
 import java.io.OutputStream
 import scala.collection.mutable.{Map, Stack}
 
-object Assembler:
-  private type Outputting[T] = given OutputStream => T
+object Assembler
+  private type Outputting[T] = (given OutputStream) => T
 
   private def writeln(line: String): Outputting[Unit] =
     val encoding = "UTF8"
-    val out = the[OutputStream]
+    val out = summon[OutputStream]
     out.write(line.getBytes(encoding))
     out.write("\n".getBytes(encoding))
 
@@ -20,20 +20,20 @@ object Assembler:
    *  the `mov` instruction can be used with `movq`, or `movl` etc.
    *  Each of these is operating on a differently sized datatype
    */
-  private enum Size(val asm: String):
+  private enum Size(val asm: String)
     case B extends Size("b")
     case L extends Size("l")
     case Q extends Size("q")
 
-  private trait AsmArg:
+  private trait AsmArg
     def asm(size: Size): String
     def doesMath: Boolean = false
 
-  private case class Constant(value: Int) extends AsmArg:
+  private case class Constant(value: Int) extends AsmArg
     def asm(size: Size) = "$" + value
 
   /** This enum holds all the possible registers */
-  private enum Reg extends AsmArg:
+  private enum Reg extends AsmArg
     case RAX
     case RBX
     case RCX
@@ -59,10 +59,10 @@ object Assembler:
       case (R10, Size.L) => "%r10d"
       case (R10, Size.Q) => "%r10"
 
-  private case class Shifted(reg: Reg, by: Int) extends AsmArg:
+  private case class Shifted(reg: Reg, by: Int) extends AsmArg
     def asm(size: Size) = s"$by(${reg.asm(Size.Q)})"
 
-  private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit]):
+  private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit])
     private val owners = Map[Int, AsmArg]()
 
     def getReg(name: IR.Name): AsmArg = owners(name.index)
@@ -127,10 +127,10 @@ object Assembler:
  *
  *  @param out the output stream this writes to
  */
-class Assembler(private val out: OutputStream):
+class Assembler(private val out: OutputStream)
   import Assembler._
 
-  given as OutputStream = out
+  given OutputStream = out
 
   /** Generate the assembly for a program.
    *

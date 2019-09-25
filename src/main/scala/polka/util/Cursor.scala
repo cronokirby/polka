@@ -2,15 +2,16 @@ package polka.util
 
 import scala.collection.IndexedSeq
 
-object Cursor:
+object Cursor
   /** Destructures an empty cursor, containing no more characters */
-  object Empty:
+  object Empty
     def unapply(cursor: Cursor[Any]): Boolean = cursor.isDone
 
   /** Destructures the first character, and the rest of the Cursor */
-  object Cons:
+  object Cons
     def unapply[T](cursor: Cursor[T]): Option[(T, Cursor[T])] =
       cursor.head.map(c => (c, cursor.advanced))
+
 
 /** Represents an advanceable cursor over a String.
  *
@@ -21,7 +22,7 @@ object Cursor:
  *  @param source the source string this cursor refers to
  *  @param pos the initial position of this cursor in that source
  */
-class Cursor[+T](private val source: IndexedSeq[T], private val pos: Int):
+class Cursor[+T](private val source: IndexedSeq[T], private val pos: Int)
   /** Construct a new Cursor at the start of a source
    *
    *  @param source the source this cursor refers to

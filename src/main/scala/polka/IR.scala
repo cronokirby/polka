@@ -5,7 +5,7 @@ import AST._
 import java.util.StringJoiner
 import scala.collection.mutable.Buffer
 
-object IR:
+object IR
   /** Represents a temporary variable in the IR.
    *
    *  There are some rules governing when these can be used:
@@ -14,11 +14,11 @@ object IR:
    *
    * @param index the index of this name
    */
-  case class Name(index: Int):
+  case class Name(index: Int)
     def pprint: String = s"#$index"
 
   /** Represents a binary operation between two operands */
-  enum BinOp:
+  enum BinOp
     /** Add the two operands using `+` */
     case Add
     /** Add the two operands using `*` */
@@ -28,13 +28,13 @@ object IR:
       case Add => "+"
       case Times => "*"
 
-  object BinOp:
+  object BinOp
     def fromAST(op: AST.BinOp): BinOp = op match
       case AST.BinOp.Add => BinOp.Add
       case AST.BinOp.Times => BinOp.Times
 
   /** Represents a unary operation against a single operand */
-  enum UnaryOp:
+  enum UnaryOp
     /** The operator `!` */
     case Not
     /** The operator `~` */
@@ -47,13 +47,13 @@ object IR:
       case BitNot => "~"
       case Negate => "-"
 
-  object UnaryOp:
+  object UnaryOp
     def fromAST(op: AST.UnaryOp): UnaryOp = op match
       case AST.UnaryOp.Not => UnaryOp.Not
       case AST.UnaryOp.BitNot => UnaryOp.BitNot
       case AST.UnaryOp.Negate => UnaryOp.Negate
 
-  enum Operand:
+  enum Operand
     case OnInt(value: Int)
     case OnName(name: Name)
 
@@ -66,7 +66,7 @@ object IR:
       case OnName(name) => name.pprint
 
   /** Represents a TAC statement */
-  enum Statement:
+  enum Statement
     /** Represents a unary operation on a given variable */
     case ApplyUnary(to: Name, op: UnaryOp, single: Name)
     /** Represents a binary operation between two operands */
@@ -84,7 +84,7 @@ object IR:
 
   def from(program: IntMainReturn): IR = Generator().from(program)
 
-  class Generator:
+  class Generator
     val buf = Buffer[Statement]()
     var tempName = 0
 
@@ -139,7 +139,7 @@ object IR:
  *
  *  This is a linear IR, roughly corresponding to a Three-Address-Code
  */
-case class IR(statements: Vector[IR.Statement]):
+case class IR(statements: Vector[IR.Statement])
   def pprint: String =
     val buf = StringJoiner("\n")
     statements.map(_.pprint).foreach(buf.add(_))

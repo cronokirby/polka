@@ -3,7 +3,7 @@ import java.io.{File, FileOutputStream}
 import scala.io.Source
 import scala.util.Using
 
-object Main:
+object Main
 
   def main(args: Array[String]): Unit =
     val filename = args(0)

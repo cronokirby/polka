@@ -5,7 +5,7 @@ import IR._
 import org.junit.Test
 import org.junit.Assert._
 
-class IRTest:
+class IRTest
   def toIR(program: String): Either[Parser.Error, IR] =
     Lexer.lex(program) match
       case Left(errors) => throw AssertionError(s"Lexing Errors: $errors")

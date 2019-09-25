@@ -3,7 +3,7 @@ package polka.util
 import org.junit.Test
 import org.junit.Assert._
 
-class IRTest:
+class IRTest
   @Test
   def `empty cursor is done`(): Unit =
     assertTrue(Cursor("").isDone)

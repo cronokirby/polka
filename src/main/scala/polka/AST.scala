@@ -1,5 +1,7 @@
 package polka
 
+import Identifiers._
+
 /** This holds types related to our second representation of C.
  *
  *  This representation comes after a desugaring step, and is more convenient
@@ -37,12 +39,34 @@ object AST
     /** An integer litteral, e.g. `12` */
     case Litteral(value: Int)
 
+  enum Statement
+    case Declaration(name: Identifier, init: Option[Expr])
+    case ExprS(expr: Expr)
+    case Return(expr: Expr)
+
   /** Represents a hardcoded `int main()` function */
+  case class IntMain(statements: Vector[Statement])
+
   case class IntMainReturn(expr: Expr)
 
   /** Convert the parser's representation of syntax to this AST */
-  def fromSyntax(syntax: Syntax.IntMainReturn): IntMainReturn =
-    IntMainReturn(fromAdd(syntax.expr))
+  def fromSyntax(syntax: Syntax.IntMain): IntMain =
+    IntMain(syntax.statements.flatMap(fromStatement(_)))
+
+  def oldFromSyntax(syntax: Syntax.IntMain): IntMainReturn = syntax match
+    case Syntax.IntMain(Vector(Syntax.Statement.Return(e))) => IntMainReturn(fromAdd(e))
+
+  private def fromStatement(statement: Syntax.Statement): Vector[Statement] =
+    statement match
+    case Syntax.Statement.Expr(add) => Vector(Statement.ExprS(fromAdd(add)))
+    case Syntax.Statement.Return(add) => Vector(Statement.Return(fromAdd(add)))
+    case Syntax.Statement.Declaration(decls) => fromDeclarators(decls)
+
+  private def fromDeclarators(decls: Vector[Syntax.InitDeclarator]): Vector[Statement] =
+    decls.map:
+      case Syntax.InitDeclarator.Uninitialized(decl) => Statement.Declaration(decl.name, None)
+      case Syntax.InitDeclarator.Initialized(decl, init) => Statement.Declaration(decl.name, Some(fromAdd(init)))
+    fromDeclarators(decls)
 
   private def fromAdd(add: Syntax.Add): Expr = add.exprs match
     case Vector(one) => fromMultiply(one)

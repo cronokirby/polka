@@ -59,5 +59,4 @@ object Syntax
    */
   case class IntMain(statements: Vector[Statement])
 
-  @deprecated
   case class IntMainReturn(expr: Add)

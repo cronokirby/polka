@@ -9,7 +9,7 @@ class ParserTest
   def parse(program: String): Either[Parser.Error, IntMainReturn] =
     Lexer.lex(program) match
       case Left(errors) => throw AssertionError(s"Lexing Errors: $errors")
-      case Right(tokens) => Parser.parse(tokens)
+      case Right(tokens) => Parser.oldParse(tokens)
 
   @Test
   def basicProgramParses(): Unit =

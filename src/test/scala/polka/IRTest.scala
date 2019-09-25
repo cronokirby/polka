@@ -9,7 +9,7 @@ class IRTest
   def toIR(program: String): Either[Parser.Error, IR] =
     Lexer.lex(program) match
       case Left(errors) => throw AssertionError(s"Lexing Errors: $errors")
-      case Right(tokens) => Parser.parse(tokens).map(x => IR.from(AST.fromSyntax(x)))
+      case Right(tokens) => Parser.oldParse(tokens).map(x => IR.from(AST.fromSyntax(x)))
 
   @Test
   def `ir works for constant return`(): Unit =

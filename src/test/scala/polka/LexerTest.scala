@@ -1,5 +1,6 @@
 package polka
 
+import Identifiers._
 import Lexer.Token
 
 import org.junit.Test
@@ -64,8 +65,8 @@ class LexerTest
     val items = Lexer.lex(program)
     val expected = Vector(
       Token.IntType,
-      Token.Identifier("x1"),
+      Token.Ident(Identifier("x1")),
       Token.Equals,
-      Token.Identifier("y")
+      Token.Ident(Identifier("y"))
     )
     assertEquals(Right(expected), items)

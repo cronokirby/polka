@@ -57,4 +57,7 @@ object Syntax
    *  As our representation of the language gets richer, we'll be able
    *  to avoid this hardcoded main function construct.
    */
+  case class IntMain(statements: Vector[Statement])
+
+  @deprecated
   case class IntMainReturn(expr: Add)

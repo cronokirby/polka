@@ -9,7 +9,7 @@ class ASTTest
   def ast(program: String): Either[Parser.Error, IntMainReturn] =
     Lexer.lex(program) match
       case Left(errors) => throw AssertionError(s"Lexing Errors: $errors")
-      case Right(tokens) => Parser.parse(tokens).map(AST.fromSyntax(_))
+      case Right(tokens) => Parser.oldParse(tokens).map(AST.fromSyntax(_))
 
   @Test
   def `AST handles basic programs`(): Unit =

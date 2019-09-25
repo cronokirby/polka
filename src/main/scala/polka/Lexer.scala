@@ -1,5 +1,7 @@
 package polka
 
+import Identifiers._
+
 import scala.collection.BufferedIterator
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.StringBuilder
@@ -23,6 +25,8 @@ object Lexer
     case CloseBrace
     /** The punctuation `;` */
     case SemiColon
+    /** The punctuation `,` */
+    case Comma
     /** The operator `!` */
     case Exclamation
     /** The operator `~` */
@@ -38,7 +42,7 @@ object Lexer
     /** An integer litteral */
     case IntLitteral(value: Int)
     /** An identifier */
-    case Identifier(value: String)
+    case Ident(value: Identifier)
 
   /** Represents the type of errors the lexing stage will generate */
   case class Error(message: String)
@@ -85,6 +89,9 @@ private class Lexer(program: String)
       case ';' =>
         source.next()
         return Some(Right(Token.SemiColon))
+      case ',' =>
+        source.next()
+        return Some(Right(Token.Comma))
       case '/' =>
         source.next()
         source.headOption match
@@ -111,7 +118,7 @@ private class Lexer(program: String)
         return Some(Right(Token.Equals))
       case c if c.isLetter =>
         val word = alphanumeric()
-        val matched = keyword(word).getOrElse(Token.Identifier(word))
+        val matched = keyword(word).getOrElse(Token.Ident(Identifier(word)))
         return Some(Right(matched))
       case i if i.isDigit =>
         val litteral = numeric()

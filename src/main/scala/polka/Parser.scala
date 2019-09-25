@@ -14,34 +14,61 @@ object Parser
    * @param tokens the series of tokens we've lexed.
    * @return either an error in parsing, or the AST
    */
-  def parse(tokens: IndexedSeq[Token]): Either[Error, IntMainReturn] =
+  def parse(tokens: IndexedSeq[Token]): Either[Error, IntMain] =
     val cursor = Cursor(tokens)
     intMainReturn.run(cursor).asEither.left.map(Error(_))
 
-  private def intMainReturn: P[Token, IntMainReturn] =
+  def oldParse(tokens: IndexedSeq[Token]): Either[Error, IntMainReturn] = Left(Error("don't use oldParse"))
+
+  private def intMainReturn: P[Token, IntMain] =
     for
       _ <- P.litt(Token.IntType)
       _ <- P.litt(Token.Main)
       _ <- P.litt(Token.OpenParens)
       _ <- P.litt(Token.CloseParens)
-      _ <- P.litt(Token.OpenBrace)
-      _ <- P.litt(Token.Return)
-      a <- add1
-      _ <- P.litt(Token.SemiColon)
-      _ <- P.litt(Token.CloseBrace)
+      b <- block
     yield
-      IntMainReturn(a)
+      IntMain(b)
 
-  private def add1: P[Token, Add] = multiply1.sepBy1(Token.Plus).map(Add(_))
+  private def block: P[Token, Vector[Statement]] =
+    P.litt(Token.OpenBrace) ~> statement.manyTill(Token.CloseBrace)
 
-  private def multiply1: P[Token, Multiply] = primaryExpr1.sepBy1(Token.Times).map(Multiply(_))
+  private def statement: P[Token, Statement] =
+    def ret = P.litt(Token.Return) ~> add.map(Statement.Expr(_)) <~ P.litt(Token.SemiColon)
+    def declaration = P.litt(Token.IntType) ~> initDeclarations.map(Statement.Declaration(_))
+    def expr = add.map(Statement.Expr(_)) <~ P.litt(Token.SemiColon)
+    ret | declaration | expr
 
-  private def primaryExpr1: P[Token, PrimaryExpr] =
+  private def initDeclarations: P[Token, Vector[InitDeclarator]] =
+    def uninitialized = declarator.map(InitDeclarator.Uninitialized(_))
+    def initialized =
+      for
+        d <- declarator
+        _ <- P.litt(Token.Equals)
+        a <- add
+      yield
+        InitDeclarator.Initialized(d, a)
+    // We need lookahead on uninitialized, to distinguish the following:
+    // `((x)) = ...` vs `((x));`
+    val initDeclarator = uninitialized.tried() | initialized
+    initDeclarator.sepBy1(Token.Comma) <~ P.litt(Token.SemiColon)
+
+  private def declarator: P[Token, Declarator] =
+    def raw = P.partial[Token, Declarator]:
+      case Token.Ident(i) => Declarator.Ident(i)
+    def wrapped = P.litt(Token.OpenParens) ~> declarator <~ P.litt(Token.CloseParens)
+    wrapped | raw
+
+  private def add: P[Token, Add] = multiply.sepBy1(Token.Plus).map(Add(_))
+
+  private def multiply: P[Token, Multiply] = primaryExpr.sepBy1(Token.Times).map(Multiply(_))
+
+  private def primaryExpr: P[Token, PrimaryExpr] =
     import PrimaryExpr._
-    def higherExpr = P.litt(Token.OpenParens) ~> add1.map(Parens(_)) <~ P.litt(Token.CloseParens)
-    def not = P.litt(Token.Exclamation) ~> primaryExpr1.map(Not(_))
-    def bitNot = P.litt(Token.Tilde) ~> primaryExpr1.map(BitNot(_))
-    def negate = P.litt(Token.Minus) ~> primaryExpr1.map(Negate(_))
+    def higherExpr = P.litt(Token.OpenParens) ~> add.map(Parens(_)) <~ P.litt(Token.CloseParens)
+    def not = P.litt(Token.Exclamation) ~> primaryExpr.map(Not(_))
+    def bitNot = P.litt(Token.Tilde) ~> primaryExpr.map(BitNot(_))
+    def negate = P.litt(Token.Minus) ~> primaryExpr.map(Negate(_))
     def litteral = P.partial[Token, PrimaryExpr]:
       case Token.IntLitteral(i) => Litteral(i)
     higherExpr | not | bitNot | negate | litteral

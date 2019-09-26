@@ -74,3 +74,10 @@ class ASTTest
       Statement.Declaration(Identifier("y"), Some(Expr.Litteral(2)))
     ))
     assertEquals(Right(expected), ast(program))
+
+  @Test
+  def `AST handles expressions with variables`(): Unit =
+    val program = "int main() { return x; }"
+    val expected = IntMain(Vector(
+      Statement.Return(Expr.Ident(Identifier("x")))
+    ))

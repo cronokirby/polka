@@ -113,3 +113,10 @@ class ParserTest
       Statement.Return(expr)
     ))
     assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `expressions containing variables can be parsed`(): Unit =
+    val program = "int main() { return x; }"
+    val expected = IntMain(Vector(
+      Statement.Return(Add(Vector(Multiply(Vector(PrimaryExpr.Ident(Identifier("x")))))))
+    ))

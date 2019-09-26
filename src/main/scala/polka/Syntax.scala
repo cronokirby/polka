@@ -29,14 +29,19 @@ object Syntax
   /** Contains a non empty sequence of things added together */
   case class Add(exprs: Vector[Multiply])
 
-  /** Represents a single assignemnt of an identifier
-   *
-   *  Right now we don't handle more complicated left side
-   *  parts, e.g. `*x = 3`. Syntactically, many other things are
-   *  valid, e.g. `-x = 3`. Semantically, we need a phase to weed
-   *  these out, or reject them in simplification.
-   */
-  case class AssignmentExpr(name: Identifier, expr: TopExpr)
+  /** Corresponds roughly to the `assignment-expr` rule */
+  enum AssignmentExpr
+    /* Represents a pass through to the next case */
+    case Pass(add: Add)
+    /** Represents a single assignemnt of an identifier
+    *
+    *  Right now we don't handle more complicated left side
+    *  parts, e.g. `*x = 3`. Syntactically, many other things are
+    *  valid, e.g. `-x = 3`. Semantically, we need a phase to weed
+    *  these out, or reject them in simplification.
+    */
+    case Assignment(name: Identifier, expr: TopExpr)
+
 
   /** Represents the entry point for expressions in C */
   case class TopExpr(exprs: Vector[AssignmentExpr])

@@ -83,9 +83,11 @@ object AST
     val (headPrelude, headExpr) = assigned.head
     (tailPrelude ++ headPrelude, headExpr)
 
-  private def fromAssignmentExpr(e: Syntax.AssignmentExpr): (Vector[Statement], Expr) =
-    val (prelude, expr) = fromTopExpr(e.expr)
-    (prelude, Expr.Assignment(e.name, expr))
+  private def fromAssignmentExpr(e: Syntax.AssignmentExpr): (Vector[Statement], Expr) = e match
+    case Syntax.AssignmentExpr.Pass(add) => (Vector(), fromAdd(add))
+    case Syntax.AssignmentExpr.Assignment(name, top) =>
+      val (prelude, expr) = fromTopExpr(top)
+      (prelude, Expr.Assignment(name, expr))
 
   private def fromAdd(add: Syntax.Add): Expr = add.exprs match
     case Vector(one) => fromMultiply(one)

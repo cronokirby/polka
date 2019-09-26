@@ -30,6 +30,7 @@ classes/
 /.worksheet/
 
 # Commonly used when testing compiler output
+a.ast
 a.s
 a.out
 a.pir

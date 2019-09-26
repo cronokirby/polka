@@ -32,8 +32,8 @@ object Parser
     P.litt(Token.OpenBrace) ~> statement.manyTill(Token.CloseBrace)
 
   private def statement: P[Token, Statement] =
-    def expr = add.map(Statement.Expr(_)) <~ P.litt(Token.SemiColon)
-    def ret = P.litt(Token.Return) ~> add.map(Statement.Return(_)) <~ P.litt(Token.SemiColon)
+    def expr = add.map(x => Statement.Expr(TopExpr(Vector(AssignmentExpr.Pass(x))))) <~ P.litt(Token.SemiColon)
+    def ret = P.litt(Token.Return) ~> add.map(x => Statement.Return(TopExpr(Vector(AssignmentExpr.Pass(x))))) <~ P.litt(Token.SemiColon)
     def declaration = P.litt(Token.IntType) ~> initDeclarations.map(Statement.Declaration(_))
     ret | declaration | expr
 

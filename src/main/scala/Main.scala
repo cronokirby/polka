@@ -22,5 +22,9 @@ object Main
               val out = FileOutputStream(file)
               out.write(prog.getBytes("UTF8"))
               out.write('\n')
+            case Some(file) if file.endsWith(".ast") =>
+              val out = FileOutputStream(file)
+              out.write(program.toString.getBytes("UTF8"))
+              out.write('\n')
             case Some(file) => Assembler(FileOutputStream(file)).generate(IR.from(program))
             case None => Assembler(System.out).generate(IR.from(program))

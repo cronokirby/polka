@@ -65,20 +65,20 @@ object Assembler
   private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit])
     private val owners = Map[Int, AsmArg]()
 
-    def getReg(name: IR.Name): AsmArg = owners(name.index)
+    def getReg(index: Int): AsmArg = owners(index)
 
-    def newReg(name: IR.Name): AsmArg =
+    def newReg(index: Int): AsmArg =
       val reg = free.pop()
-      owners += name.index -> reg
+      owners += index -> reg
       reg
 
-    def reuseReg(from: IR.Name, to: IR.Name): AsmArg =
-      val reg = owners(from.index)
-      owners += to.index -> reg
+    def reuseReg(from: Int, to: Int): AsmArg =
+      val reg = owners(from)
+      owners += to -> reg
       reg
 
-    def freeReg(from: IR.Name): AsmArg =
-      val freed = owners(from.index)
+    def freeReg(from: Int): AsmArg =
+      val freed = owners(from)
       free.push(freed)
       freed
 
@@ -146,8 +146,8 @@ class Assembler(private val out: OutputStream)
       (count, s) => s match
       case IR.Statement.Initialize(_, _) => count + 1
       case IR.Statement.ApplyBin(_, _, left, right) =>
-        val addLeft = if left.isName then 1 else 0
-        val addRight = if right.isName then 1 else 0
+        val addLeft = if left.isTemp then 1 else 0
+        val addRight = if right.isTemp then 1 else 0
         count + 1 - addLeft - addRight
       case _ => count
     val maxCount = counts.reduce(_ max _)

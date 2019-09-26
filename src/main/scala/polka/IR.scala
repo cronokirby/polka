@@ -1,21 +1,37 @@
 package polka
 
 import AST._
+import Identifiers._
 
 import java.util.StringJoiner
 import scala.collection.mutable.Buffer
 
 object IR
-  /** Represents a temporary variable in the IR.
-   *
-   *  There are some rules governing when these can be used:
-   *  - They can only appear on the left side of a statement once
-   *  - They can only appear on the right side of a statement once
-   *
-   * @param index the index of this name
-   */
-  case class Name(index: Int)
-    def pprint: String = s"#$index"
+  /** Represents a variable in the IR */
+  enum Variable
+    /** Represents a temporary variable in the IR.
+    *
+    *  There are some rules governing when these can be used:
+    *  - They can only appear on the left side of a statement once
+    *  - They can only appear on the right side of a statement once
+    *
+    * @param index the index of this name
+    */
+    case Temp(index: Int)
+    /** Represents a permanent variable
+     *
+     *  Unlike temporary variables, this need to be explicitly created, and
+     *  can be used multiple times.
+     */
+    case Perm(ident: Identifier)
+
+    def pprint: String = this match
+      case Temp(i) => s"#$i"
+      case Perm(ident) => s"$ident"
+
+    def isTemp: Boolean = this match
+      case Temp(_) => true
+      case Perm(_) => false
 
   /** Represents a binary operation between two operands */
   enum BinOp
@@ -55,85 +71,95 @@ object IR
 
   enum Operand
     case OnInt(value: Int)
-    case OnName(name: Name)
+    case OnVar(variable: Variable)
 
-    def isName: Boolean = this match
-      case OnName(_) => true
+    def isTemp: Boolean = this match
+      case OnVar(v) => v.isTemp
       case OnInt(_) => false
 
     def pprint: String = this match
       case OnInt(int) => int.toString
-      case OnName(name) => name.pprint
+      case OnVar(variable) => variable.pprint
 
   /** Represents a TAC statement */
   enum Statement
     /** Represents a unary operation on a given variable */
-    case ApplyUnary(to: Name, op: UnaryOp, single: Name)
+    case ApplyUnary(to: Variable, op: UnaryOp, single: Variable)
     /** Represents a binary operation between two operands */
-    case ApplyBin(to: Name, op: BinOp, left: Operand, right: Operand)
+    case ApplyBin(to: Variable, op: BinOp, left: Operand, right: Operand)
     /** Initialize a given variable with a value */
-    case Initialize(name: Name, as: Int)
+    case Initialize(name: Variable, as: Operand)
+    /** Create a new permanent variable */
+    case Create(ident: Identifier)
     /** Return the value in a variable */
-    case Return(value: Name)
+    case Return(variable: Variable)
 
     def pprint: String = this match
       case ApplyUnary(to, op, single) => s"${to.pprint} = ${op.pprint}${single.pprint}"
       case ApplyBin(to, op, l, r) => s"${to.pprint} = ${l.pprint} ${op.pprint} ${r.pprint}"
       case Initialize(name, as) => s"${name.pprint} = $as"
-      case Return(value: Name) => s"ret ${value.pprint}"
+      case Return(value: Variable) => s"ret ${value.pprint}"
 
-  def from(program: IntMainReturn): IR = Generator().from(program)
+  def from(program: IntMain): IR = Generator().from(program)
 
   class Generator
     val buf = Buffer[Statement]()
     var tempName = 0
 
-    private def nextName(): Name =
-      val name = Name(tempName)
+    private def nextTemp(): Variable =
+      val name = Variable.Temp(tempName)
       tempName += 1
       name
 
     private def gen(stmt: Statement): Unit = buf += stmt
 
-    def from(program: IntMainReturn): IR =
-      val name = expr(program.expr) match
-        case Operand.OnInt(int) => createInt(int)
-        case Operand.OnName(name) => name
-      gen(Statement.Return(name))
+    def from(program: IntMain): IR =
       IR(buf.toVector)
+
+    private def statement(stmt: AST.Statement): Unit = stmt match
+      case AST.Statement.Declaration(name, init) =>
+        gen(Statement.Create(name))
+        val variable = Variable.Perm(name)
+        init.foreach(e => gen(Statement.Initialize(variable, expr(e))))
+      case AST.Statement.ExprS(e) => expr(e)
+      case AST.Statement.Return(e) =>
+        val name = expr(e) match
+          case Operand.OnInt(int) => createInt(int)
+          case Operand.OnVar(v) => v
+        gen(Statement.Return(name))
 
     private def expr(e: Expr): Operand = e match
       case Expr.Litteral(int) => Operand.OnInt(int)
       case Expr.Binary(op, terms) => reduceOp(terms, BinOp.fromAST(op))
       case Expr.Unary(op, term) =>
-        val name = createName(expr(term))
-        val next = nextName()
+        val name = createVariable(expr(term))
+        val next = nextTemp()
         gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
-        Operand.OnName(next)
+        Operand.OnVar(next)
 
     private def reduceOp(exprs: Vector[Expr], op: BinOp): Operand =
       val root = expr(exprs.head)
       if exprs.length == 1 then
         root
       else
-        var name = root match
+        var variable = root match
           case Operand.OnInt(int) => createInt(int)
-          case Operand.OnName(name) => name
+          case Operand.OnVar(variable) => variable
         for e <- exprs.tail do
           val operand = expr(e)
-          val oldName = Operand.OnName(name)
-          name = nextName()
-          gen(Statement.ApplyBin(name, op, oldName, operand))
-        Operand.OnName(name)
+          val oldName = Operand.OnVar(variable)
+          variable = nextTemp()
+          gen(Statement.ApplyBin(variable, op, oldName, operand))
+        Operand.OnVar(variable)
 
-    private def createInt(int: Int): Name =
-      val name = nextName()
-      gen(Statement.Initialize(name, int))
-      name
+    private def createInt(int: Int): Variable =
+      val variable = nextTemp()
+      gen(Statement.Initialize(variable, Operand.OnInt(int)))
+      variable
 
-    private def createName(operand: Operand): Name = operand match
+    private def createVariable(operand: Operand): Variable = operand match
       case Operand.OnInt(int) => createInt(int)
-      case Operand.OnName(name) => name
+      case Operand.OnVar(variable) => variable
 
 /** Represents a series of statements, composing our IR
  *

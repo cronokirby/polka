@@ -2,7 +2,7 @@
 for file in tests/*.c; do
     echo "Testing $file"
     expected=`grep -oP "SHOULDBE \K\w+" $file | head -1`
-    java -jar target/scala-0.18/polka-assembly-0.1.0.jar $file a.s
+    java -jar target/scala-0.19/polka-assembly-0.1.0.jar $file a.s
     gcc a.s
     ./a.out
     res="$?"

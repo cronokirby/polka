@@ -97,7 +97,8 @@ object IR
     def pprint: String = this match
       case ApplyUnary(to, op, single) => s"${to.pprint} = ${op.pprint}${single.pprint}"
       case ApplyBin(to, op, l, r) => s"${to.pprint} = ${l.pprint} ${op.pprint} ${r.pprint}"
-      case Initialize(name, as) => s"${name.pprint} = $as"
+      case Initialize(name, as) => s"${name.pprint} = ${as.pprint}"
+      case Create(ident) => s"create $ident"
       case Return(value: Variable) => s"ret ${value.pprint}"
 
   def from(program: IntMain): IR = Generator().from(program)
@@ -114,6 +115,7 @@ object IR
     private def gen(stmt: Statement): Unit = buf += stmt
 
     def from(program: IntMain): IR =
+      program.statements.foreach(statement(_))
       IR(buf.toVector)
 
     private def statement(stmt: AST.Statement): Unit = stmt match

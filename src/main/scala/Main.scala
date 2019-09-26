@@ -13,7 +13,7 @@ object Main
     source.close()
     Lexer.lex(program) match
       case Left(err) => println(s"Lexing Errors: $err")
-      case Right(tokens) => Parser.parse(tokens).map(AST.oldFromSyntax(_)) match
+      case Right(tokens) => Parser.parse(tokens).map(AST.fromSyntax(_)) match
         case Left(err) => println(s"Parsing Error: $err $tokens")
         case Right(program) =>
           val out = outname match

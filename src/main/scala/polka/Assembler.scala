@@ -63,21 +63,21 @@ object Assembler
     def asm(size: Size) = s"$by(${reg.asm(Size.Q)})"
 
   private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit])
-    private val owners = Map[Int, AsmArg]()
+    private val owners = Map[IR.Variable, AsmArg]()
 
-    def getReg(index: Int): AsmArg = owners(index)
+    def getReg(variable: IR.Variable): AsmArg = owners(variable)
 
-    def newReg(index: Int): AsmArg =
+    def newReg(variable: IR.Variable): AsmArg =
       val reg = free.pop()
-      owners += index -> reg
+      owners += variable -> reg
       reg
 
-    def reuseReg(from: Int, to: Int): AsmArg =
+    def reuseReg(from: IR.Variable, to: IR.Variable): AsmArg =
       val reg = owners(from)
       owners += to -> reg
       reg
 
-    def freeReg(from: Int): AsmArg =
+    def freeReg(from: IR.Variable): AsmArg =
       val freed = owners(from)
       free.push(freed)
       freed
@@ -178,12 +178,26 @@ class Assembler(private val out: OutputStream)
           mul(Size.L, source, ctx.scratch)
           mov(Size.Q, ctx.scratch, dest)
 
+    def binWithInt(to: IR.Variable, op: IR.BinOp, int: Int, source: IR.Variable): Unit =
+      val canReuse = source.isTemp || source == to
+      val reg = if canReuse then ctx.reuseReg(source, to) else ctx.newReg(to)
+      applyOp(op, Constant(int), reg)
+
     stmt match
-    case IR.Statement.Initialize(name, value) =>
-      val reg = ctx.newReg(name)
-      mov(Size.L, Constant(value), reg)
+    case IR.Statement.Create(name) =>
+      ctx.newReg(IR.Variable.Perm(name))
+    case IR.Statement.Initialize(variable, value) =>
+      val reg = if variable.isTemp then ctx.newReg(variable) else ctx.getReg(variable)
+      val toMove = value match
+        case OnInt(i) => Constant(i)
+        case OnVar(v) => ctx.getReg(v)
+      mov(Size.L, toMove, reg)
     case IR.Statement.ApplyUnary(to, op, arg) =>
-      val reg = ctx.reuseReg(arg, to)
+      val reg = if to.isTemp then
+        ctx.reuseReg(arg, to)
+      else
+        mov(Size.L, ctx.getReg(arg), ctx.getReg(to))
+        ctx.getReg(to)
       op match
       case IR.UnaryOp.BitNot => not(Size.L, reg)
       case IR.UnaryOp.Negate => neg(Size.L, reg)
@@ -192,19 +206,23 @@ class Assembler(private val out: OutputStream)
         sete(reg)
         movz(Size.B, Size.L, reg, reg)
     case IR.Statement.ApplyBin(to, op, OnInt(l), OnInt(r)) =>
-      val reg = ctx.newReg(to)
+      val reg = if to.isTemp then ctx.newReg(to) else ctx.getReg(to)
       mov(Size.L, Constant(l), reg)
       applyOp(op, Constant(r), reg)
-    case IR.Statement.ApplyBin(to, op, OnInt(int), OnName(source)) =>
-      val reg = ctx.reuseReg(source, to)
-      applyOp(op, Constant(int), reg)
-    case IR.Statement.ApplyBin(to, op, OnName(source), OnInt(int)) =>
-      val reg = ctx.reuseReg(source, to)
-      applyOp(op, Constant(int), reg)
-    case IR.Statement.ApplyBin(to, op, OnName(left), OnName(right)) =>
-      val owned = ctx.reuseReg(left, to)
-      val freed = ctx.freeReg(right)
-      applyOp(op, freed, owned)
+    case IR.Statement.ApplyBin(to, op, OnInt(int), OnVar(source)) =>
+      binWithInt(to, op, int, source)
+    case IR.Statement.ApplyBin(to, op, OnVar(source), OnInt(int)) =>
+      binWithInt(to, op, int, source)
+    case IR.Statement.ApplyBin(to, op, OnVar(left), OnVar(right)) =>
+      (left.isTemp, right.isTemp) match
+      case (true, true) => applyOp(op, ctx.freeReg(right), ctx.reuseReg(left, to))
+      case (true, false) => applyOp(op, ctx.getReg(right), ctx.reuseReg(left, to))
+      case (false, true) => applyOp(op, ctx.getReg(left), ctx.reuseReg(right, to))
+      case (false, false) =>
+        // Because to isn't temporary, we know a register has been allocated
+        val dest = ctx.getReg(to)
+        mov(Size.L, ctx.getReg(right), dest)
+        applyOp(op, ctx.getReg(left), dest)
     case IR.Statement.Return(name) =>
       val reg = ctx.getReg(name)
       if reg != Reg.RAX then mov(Size.L, reg, Reg.RAX)

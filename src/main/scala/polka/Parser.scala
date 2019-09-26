@@ -69,4 +69,6 @@ object Parser
     def negate = P.litt(Token.Minus) ~> primaryExpr.map(Negate(_))
     def litteral = P.partial[Token, PrimaryExpr]:
       case Token.IntLitteral(i) => Litteral(i)
-    higherExpr | not | bitNot | negate | litteral
+    def ident = P.partial[Token, PrimaryExpr]:
+      case Token.Ident(name) => Ident(name)
+    higherExpr | not | bitNot | negate | litteral | ident

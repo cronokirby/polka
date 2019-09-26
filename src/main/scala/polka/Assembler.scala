@@ -219,8 +219,7 @@ class Assembler(private val out: OutputStream)
       case (true, false) => applyOp(op, ctx.getReg(right), ctx.reuseReg(left, to))
       case (false, true) => applyOp(op, ctx.getReg(left), ctx.reuseReg(right, to))
       case (false, false) =>
-        // Because to isn't temporary, we know a register has been allocated
-        val dest = ctx.getReg(to)
+        val dest = if to.isTemp then ctx.newReg(to) else ctx.getReg(to)
         mov(Size.L, ctx.getReg(right), dest)
         applyOp(op, ctx.getReg(left), dest)
     case IR.Statement.Return(name) =>

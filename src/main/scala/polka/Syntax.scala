@@ -10,7 +10,10 @@ import Identifiers._
  */
 object Syntax
   enum PrimaryExpr
+    /** Represents a litteral, e.g. `2` */
     case Litteral(value: Int)
+    /** Represents a reference to a variable */
+    case Ident(name: Identifier)
     /** Represents the use of logical negation `!` */
     case Not(value: PrimaryExpr)
     /** Represents the use of bitwise not `~` */

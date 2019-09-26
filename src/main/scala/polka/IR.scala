@@ -132,6 +132,7 @@ object IR
 
     private def expr(e: Expr): Operand = e match
       case Expr.Litteral(int) => Operand.OnInt(int)
+      case Expr.Ident(name) => Operand.OnVar(Variable.Perm(name))
       case Expr.Binary(op, terms) => reduceOp(terms, BinOp.fromAST(op))
       case Expr.Unary(op, term) =>
         val name = createVariable(expr(term))

@@ -38,6 +38,8 @@ object AST
     case Unary(op: UnaryOp, term: Expr)
     /** An integer litteral, e.g. `12` */
     case Litteral(value: Int)
+    /** A reference to an identifier, e.g. `x` */
+    case Ident(name: Identifier)
 
   /** Represents a statement that might have some effect
    *
@@ -81,6 +83,7 @@ object AST
     import Syntax.PrimaryExpr
     prim match
     case PrimaryExpr.Litteral(int) => Expr.Litteral(int)
+    case PrimaryExpr.Ident(name) => Expr.Ident(name)
     case PrimaryExpr.BitNot(prim) => Expr.Unary(UnaryOp.BitNot, fromPrimExpr(prim))
     case PrimaryExpr.Not(prim) => Expr.Unary(UnaryOp.Not, fromPrimExpr(prim))
     case PrimaryExpr.Negate(prim) => Expr.Unary(UnaryOp.Negate, fromPrimExpr(prim))

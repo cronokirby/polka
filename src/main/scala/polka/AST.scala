@@ -36,6 +36,8 @@ object AST
     case Binary(op: BinOp, terms: Vector[Expr])
     /** A unary operator on a given term, e.g. `!_` */
     case Unary(op: UnaryOp, term: Expr)
+    /** Represents an assignment of a name to an expression */
+    case Assignment(name: Identifier, term: Expr)
     /** An integer litteral, e.g. `12` */
     case Litteral(value: Int)
     /** A reference to an identifier, e.g. `x` */
@@ -62,14 +64,28 @@ object AST
 
   private def fromStatement(statement: Syntax.Statement): Vector[Statement] =
     statement match
-    case Syntax.Statement.Expr(add) => Vector(Statement.ExprS(fromAdd(add)))
-    case Syntax.Statement.Return(add) => Vector(Statement.Return(fromAdd(add)))
+    case Syntax.Statement.Expr(top) =>
+      val (prelude, expr) = fromTopExpr(top)
+      prelude :+ Statement.ExprS(expr)
+    case Syntax.Statement.Return(top) =>
+      val (prelude, expr) = fromTopExpr(top)
+      prelude :+ Statement.Return(expr)
     case Syntax.Statement.Declaration(decls) => fromDeclarators(decls)
 
   private def fromDeclarators(decls: Vector[Syntax.InitDeclarator]): Vector[Statement] =
     decls.map:
       case Syntax.InitDeclarator.Uninitialized(decl) => Statement.Declaration(decl.name, None)
       case Syntax.InitDeclarator.Initialized(decl, init) => Statement.Declaration(decl.name, Some(fromAdd(init)))
+
+  private def fromTopExpr(expr: Syntax.TopExpr): (Vector[Statement], Expr) =
+    val assigned = expr.exprs.map(fromAssignmentExpr(_))
+    val tailPrelude = assigned.tail.flatMap((prelude, e) => prelude :+ Statement.ExprS(e))
+    val (headPrelude, headExpr) = assigned.head
+    (tailPrelude ++ headPrelude, headExpr)
+
+  private def fromAssignmentExpr(e: Syntax.AssignmentExpr): (Vector[Statement], Expr) =
+    val (prelude, expr) = fromTopExpr(e.expr)
+    (prelude, Expr.Assignment(e.name, expr))
 
   private def fromAdd(add: Syntax.Add): Expr = add.exprs match
     case Vector(one) => fromMultiply(one)

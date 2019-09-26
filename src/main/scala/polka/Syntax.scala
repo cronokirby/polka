@@ -29,6 +29,18 @@ object Syntax
   /** Contains a non empty sequence of things added together */
   case class Add(exprs: Vector[Multiply])
 
+  /** Represents a single assignemnt of an identifier
+   *
+   *  Right now we don't handle more complicated left side
+   *  parts, e.g. `*x = 3`. Syntactically, many other things are
+   *  valid, e.g. `-x = 3`. Semantically, we need a phase to weed
+   *  these out, or reject them in simplification.
+   */
+  case class AssignmentExpr(name: Identifier, expr: TopExpr)
+
+  /** Represents the entry point for expressions in C */
+  case class TopExpr(exprs: Vector[AssignmentExpr])
+
   /** Represents the name of a declaration.
    *
    *  Roughly corresponds to the `direct-declarator` rule
@@ -45,11 +57,11 @@ object Syntax
   /** Represents a statement in a block */
   enum Statement
     /** An expression statement, e.g. `2 + 2;` */
-    case Expr(expr: Add)
+    case Expr(expr: TopExpr)
     /** Represents a declaration, e.g. `int x = 2, y;` */
     case Declaration(declarators: Vector[InitDeclarator])
     /** Represents a return statement, e.g. `return 2 +2;` */
-    case Return(expr: Add)
+    case Return(expr: TopExpr)
 
   /** Represents a hardcoded `int main()` function.
    *

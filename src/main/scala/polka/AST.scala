@@ -54,15 +54,9 @@ object AST
   /** Represents a hardcoded `int main()` function */
   case class IntMain(statements: Vector[Statement])
 
-  @deprecated
-  case class IntMainReturn(expr: Expr)
-
   /** Convert the parser's representation of syntax to this AST */
   def fromSyntax(syntax: Syntax.IntMain): IntMain =
     IntMain(syntax.statements.flatMap(fromStatement(_)))
-
-  def oldFromSyntax(syntax: Syntax.IntMain): IntMainReturn = syntax match
-    case Syntax.IntMain(Vector(Syntax.Statement.Return(e))) => IntMainReturn(fromAdd(e))
 
   private def fromStatement(statement: Syntax.Statement): Vector[Statement] =
     statement match

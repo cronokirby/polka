@@ -54,5 +54,3 @@ object Syntax
    *  to avoid this hardcoded main function construct.
    */
   case class IntMain(statements: Vector[Statement])
-
-  case class IntMainReturn(expr: Add)

@@ -88,7 +88,7 @@ object IR
     /** Represents a binary operation between two operands */
     case ApplyBin(to: Variable, op: BinOp, left: Operand, right: Operand)
     /** Initialize a given variable with a value */
-    case Initialize(name: Variable, as: Operand)
+    case Assign(name: Variable, as: Operand)
     /** Create a new permanent variable */
     case Create(ident: Identifier)
     /** Return the value in a variable */
@@ -97,7 +97,7 @@ object IR
     def pprint: String = this match
       case ApplyUnary(to, op, single) => s"${to.pprint} = ${op.pprint}${single.pprint}"
       case ApplyBin(to, op, l, r) => s"${to.pprint} = ${l.pprint} ${op.pprint} ${r.pprint}"
-      case Initialize(name, as) => s"${name.pprint} = ${as.pprint}"
+      case Assign(name, as) => s"${name.pprint} = ${as.pprint}"
       case Create(ident) => s"create $ident"
       case Return(value: Variable) => s"ret ${value.pprint}"
 
@@ -122,7 +122,8 @@ object IR
       case AST.Statement.Declaration(name, init) =>
         gen(Statement.Create(name))
         val variable = Variable.Perm(name)
-        init.foreach(e => gen(Statement.Initialize(variable, expr(e))))
+        init.foreach(e => gen(Statement.Assign(variable, expr(e))))
+      // This will generate all the parts of this expression causing side effects
       case AST.Statement.ExprS(e) => expr(e)
       case AST.Statement.Return(e) =>
         val name = expr(e) match
@@ -134,6 +135,10 @@ object IR
       case Expr.Litteral(int) => Operand.OnInt(int)
       case Expr.Ident(name) => Operand.OnVar(Variable.Perm(name))
       case Expr.Binary(op, terms) => reduceOp(terms, BinOp.fromAST(op))
+      case Expr.Assignment(name, term) =>
+        val operand = expr(term)
+        gen(Statement.Assign(Variable.Perm(name), operand))
+        Operand.OnVar(Variable.Perm(name))
       case Expr.Unary(op, term) =>
         val name = createVariable(expr(term))
         val next = nextTemp()
@@ -157,7 +162,7 @@ object IR
 
     private def createInt(int: Int): Variable =
       val variable = nextTemp()
-      gen(Statement.Initialize(variable, Operand.OnInt(int)))
+      gen(Statement.Assign(variable, Operand.OnInt(int)))
       variable
 
     private def createVariable(operand: Operand): Variable = operand match

@@ -16,7 +16,7 @@ class IRTest
     val program = "int main() { return 42; }"
     val ir = toIR(program)
     val expected = IR(Vector(
-      Statement.Initialize(Variable.Temp(0), Operand.OnInt(42)),
+      Statement.Assign(Variable.Temp(0), Operand.OnInt(42)),
       Statement.Return(Variable.Temp(0))
     ))
     assertEquals(Right(expected), ir)

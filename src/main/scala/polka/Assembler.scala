@@ -144,11 +144,13 @@ class Assembler(private val out: OutputStream)
   private def statements(stmts: Vector[IR.Statement]): Unit =
     val counts = stmts.scanLeft(0):
       (count, s) => s match
-      case IR.Statement.Initialize(_, _) => count + 1
-      case IR.Statement.ApplyBin(_, _, left, right) =>
-        val addLeft = if left.isTemp then 1 else 0
-        val addRight = if right.isTemp then 1 else 0
-        count + 1 - addLeft - addRight
+      case IR.Statement.Create(_) => count + 1
+      case IR.Statement.Assign(v, _) => if v.isTemp then count + 1 else count
+      case IR.Statement.ApplyBin(to, _, left, right) =>
+        val leftDies = if left.isTemp then 1 else 0
+        val rightDies = if right.isTemp then 1 else 0
+        val toNew = if to.isTemp then 1 else 0
+        count + toNew - leftDies - rightDies
       case _ => count
     val maxCount = counts.reduce(_ max _)
     val freeRegisters = Stack[AsmArg](Reg.RAX, Reg.RBX, Reg.RCX)
@@ -186,7 +188,7 @@ class Assembler(private val out: OutputStream)
     stmt match
     case IR.Statement.Create(name) =>
       ctx.newReg(IR.Variable.Perm(name))
-    case IR.Statement.Initialize(variable, value) =>
+    case IR.Statement.Assign(variable, value) =>
       val reg = if variable.isTemp then ctx.newReg(variable) else ctx.getReg(variable)
       val toMove = value match
         case OnInt(i) => Constant(i)

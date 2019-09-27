@@ -73,9 +73,11 @@ object AST
     case Syntax.Statement.Declaration(decls) => fromDeclarators(decls)
 
   private def fromDeclarators(decls: Vector[Syntax.InitDeclarator]): Vector[Statement] =
-    decls.map:
-      case Syntax.InitDeclarator.Uninitialized(decl) => Statement.Declaration(decl.name, None)
-      case Syntax.InitDeclarator.Initialized(decl, init) => Statement.Declaration(decl.name, Some(fromAdd(init)))
+    decls.flatMap:
+      case Syntax.InitDeclarator.Uninitialized(decl) => Vector(Statement.Declaration(decl.name, None))
+      case Syntax.InitDeclarator.Initialized(decl, init) =>
+        val (prelude, top) = fromTopExpr(init)
+        prelude :+ Statement.Declaration(decl.name, Some(top))
 
   private def fromTopExpr(expr: Syntax.TopExpr): (Vector[Statement], Expr) =
     val assigned = expr.exprs.map(fromAssignmentExpr(_))

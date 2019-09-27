@@ -57,7 +57,7 @@ object Syntax
     /** A declaration without initialization, e.g. `x` */
     case Uninitialized(decl: Declarator)
     /** A declaration with initialization, e.g. `x = 2` */
-    case Initialized(decl: Declarator, init: Add)
+    case Initialized(decl: Declarator, init: TopExpr)
 
   /** Represents a statement in a block */
   enum Statement

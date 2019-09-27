@@ -1,5 +1,6 @@
 package polka
 
+import Identifiers._
 import Lexer.Token
 import polka.util.{Cursor, Parser => P}
 import Syntax._
@@ -32,8 +33,8 @@ object Parser
     P.litt(Token.OpenBrace) ~> statement.manyTill(Token.CloseBrace)
 
   private def statement: P[Token, Statement] =
-    def expr = add.map(x => Statement.Expr(TopExpr(Vector(AssignmentExpr.Pass(x))))) <~ P.litt(Token.SemiColon)
-    def ret = P.litt(Token.Return) ~> add.map(x => Statement.Return(TopExpr(Vector(AssignmentExpr.Pass(x))))) <~ P.litt(Token.SemiColon)
+    def expr = topExpr.map(Statement.Expr(_)) <~ P.litt(Token.SemiColon)
+    def ret = P.litt(Token.Return) ~> topExpr.map(Statement.Return(_)) <~ P.litt(Token.SemiColon)
     def declaration = P.litt(Token.IntType) ~> initDeclarations.map(Statement.Declaration(_))
     ret | declaration | expr
 
@@ -43,9 +44,9 @@ object Parser
       for
         d <- declarator
         _ <- P.litt(Token.Equals)
-        a <- add
+        t <- topExpr
       yield
-        InitDeclarator.Initialized(d, a)
+        InitDeclarator.Initialized(d, t)
     // We need lookahead on initialized, to distinguish the following:
     // `((x)) = ...` vs `((x));`
     val initDeclarator = initialized.tried() | uninitialized
@@ -56,6 +57,22 @@ object Parser
       case Token.Ident(i) => Declarator(i)
     def wrapped = P.litt(Token.OpenParens) ~> declarator <~ P.litt(Token.CloseParens)
     wrapped | raw
+
+  private def topExpr: P[Token, TopExpr] =
+    // Yes, `2, 2` is a valid expression
+    assignmentExpr.sepBy1(Token.Comma).map(TopExpr(_))
+
+  private def assignmentExpr: P[Token, AssignmentExpr] =
+    def assignment: P[Token, AssignmentExpr] =
+      for
+        i <- P.partial[Token, Identifier] { case Token.Ident(i) => i }
+        _ <- P.litt(Token.Equals)
+        t <- topExpr
+      yield
+        AssignmentExpr.Assignment(i, t)
+    def pass = add.map(AssignmentExpr.Pass(_))
+    // We need to lookahead to distinguish `x = _` vs `x`
+    assignment.tried() | pass
 
   private def add: P[Token, Add] = multiply.sepBy1(Token.Plus).map(Add(_))
 

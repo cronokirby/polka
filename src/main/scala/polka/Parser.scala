@@ -44,9 +44,9 @@ object Parser
       for
         d <- declarator
         _ <- P.litt(Token.Equals)
-        t <- topExpr
+        a <- assignmentExpr
       yield
-        InitDeclarator.Initialized(d, t)
+        InitDeclarator.Initialized(d, a)
     // We need lookahead on initialized, to distinguish the following:
     // `((x)) = ...` vs `((x));`
     val initDeclarator = initialized.tried() | uninitialized
@@ -67,9 +67,9 @@ object Parser
       for
         i <- P.partial[Token, Identifier] { case Token.Ident(i) => i }
         _ <- P.litt(Token.Equals)
-        t <- topExpr
+        a <- assignmentExpr
       yield
-        AssignmentExpr.Assignment(i, t)
+        AssignmentExpr.Assignment(i, a)
     def pass = add.map(AssignmentExpr.Pass(_))
     // We need to lookahead to distinguish `x = _` vs `x`
     assignment.tried() | pass

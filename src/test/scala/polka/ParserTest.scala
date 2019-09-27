@@ -59,7 +59,7 @@ class ParserTest
   @Test
   def `single declarations with initialization parse`: Unit =
     val program = "int main() { int x = 2; }"
-    val expr = TopExpr(Vector(AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))))
+    val expr = AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))
     val expected = IntMain(Vector(
       Statement.Declaration(Vector(
         InitDeclarator.Initialized(Declarator(Identifier("x")), expr)
@@ -81,7 +81,7 @@ class ParserTest
   @Test
   def `multiple mixed declarations parse`: Unit =
     val program = "int main() { int x, y, z = 2; }"
-    val expr = TopExpr(Vector(AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))))
+    val expr = AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))
     val expected = IntMain(Vector(
       Statement.Declaration(Vector(
         InitDeclarator.Uninitialized(Declarator(Identifier("x"))),
@@ -92,9 +92,21 @@ class ParserTest
     assertEquals(Right(expected), parse(program))
 
   @Test
+  def `multiple initialized declarations parse`: Unit =
+    val program = "int main() { int x = 2, y = 2; }"
+    val expr = AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))
+    val expected = IntMain(Vector(
+      Statement.Declaration(Vector(
+        InitDeclarator.Initialized(Declarator(Identifier("x")), expr),
+        InitDeclarator.Initialized(Declarator(Identifier("y")), expr)
+      ))
+    ))
+    assertEquals(Right(expected), parse(program))
+
+  @Test
   def `multiple declarations with parens work`: Unit =
     val program = "int main() { int (x), (y), (z) = 2; }"
-    val expr = TopExpr(Vector(AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))))
+    val expr = AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(2))))))
     val expected = IntMain(Vector(
       Statement.Declaration(Vector(
         InitDeclarator.Uninitialized(Declarator(Identifier("x"))),
@@ -121,17 +133,19 @@ class ParserTest
     val expected = IntMain(Vector(
       Statement.Return(expr)
     ))
+    assertEquals(Right(expected), parse(program))
 
   @Test
   def `assignment expressions parse`: Unit =
     val program = "int main() { x = y = 1, z = 1; }"
-    val one = TopExpr(Vector(AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(1))))))))
+    val one = AssignmentExpr.Pass(Add(Vector(Multiply(Vector(PrimaryExpr.Litteral(1))))))
     val yEquals = AssignmentExpr.Assignment(Identifier("y"), one)
     val zEquals = AssignmentExpr.Assignment(Identifier("z"), one)
-    val assignments = TopExpr(Vector(yEquals, zEquals))
+    val xEquals = AssignmentExpr.Assignment(Identifier("x"), yEquals)
     val expected = IntMain(Vector(
-      Statement.Expr(TopExpr(Vector(AssignmentExpr.Assignment(Identifier("x"), assignments))))
+      Statement.Expr(TopExpr(Vector(xEquals, zEquals)))
     ))
+    assertEquals(Right(expected), parse(program))
 
   @Test
   def `comma seperated expressions are valid`: Unit =
@@ -140,3 +154,4 @@ class ParserTest
     val expected = IntMain(Vector(
       Statement.Expr(TopExpr(Vector(AssignmentExpr.Pass(two), AssignmentExpr.Pass(two))))
     ))
+    assertEquals(Right(expected), parse(program))

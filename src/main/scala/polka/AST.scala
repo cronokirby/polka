@@ -76,7 +76,7 @@ object AST
     decls.flatMap:
       case Syntax.InitDeclarator.Uninitialized(decl) => Vector(Statement.Declaration(decl.name, None))
       case Syntax.InitDeclarator.Initialized(decl, init) =>
-        val (prelude, top) = fromTopExpr(init)
+        val (prelude, top) = fromAssignmentExpr(init)
         prelude :+ Statement.Declaration(decl.name, Some(top))
 
   private def fromTopExpr(expr: Syntax.TopExpr): (Vector[Statement], Expr) =
@@ -87,8 +87,8 @@ object AST
 
   private def fromAssignmentExpr(e: Syntax.AssignmentExpr): (Vector[Statement], Expr) = e match
     case Syntax.AssignmentExpr.Pass(add) => (Vector(), fromAdd(add))
-    case Syntax.AssignmentExpr.Assignment(name, top) =>
-      val (prelude, expr) = fromTopExpr(top)
+    case Syntax.AssignmentExpr.Assignment(name, a) =>
+      val (prelude, expr) = fromAssignmentExpr(a)
       (prelude, Expr.Assignment(name, expr))
 
   private def fromAdd(add: Syntax.Add): Expr = add.exprs match

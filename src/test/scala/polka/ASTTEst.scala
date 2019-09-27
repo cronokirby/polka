@@ -81,3 +81,4 @@ class ASTTest
     val expected = IntMain(Vector(
       Statement.Return(Expr.Ident(Identifier("x")))
     ))
+    assertEquals(Right(expected), ast(program))

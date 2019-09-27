@@ -40,7 +40,7 @@ object Syntax
     *  valid, e.g. `-x = 3`. Semantically, we need a phase to weed
     *  these out, or reject them in simplification.
     */
-    case Assignment(name: Identifier, expr: TopExpr)
+    case Assignment(name: Identifier, expr: AssignmentExpr)
 
 
   /** Represents the entry point for expressions in C */
@@ -57,7 +57,7 @@ object Syntax
     /** A declaration without initialization, e.g. `x` */
     case Uninitialized(decl: Declarator)
     /** A declaration with initialization, e.g. `x = 2` */
-    case Initialized(decl: Declarator, init: TopExpr)
+    case Initialized(decl: Declarator, init: AssignmentExpr)
 
   /** Represents a statement in a block */
   enum Statement

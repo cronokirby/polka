@@ -4,6 +4,7 @@ import AST._
 import Identifiers._
 
 import java.util.StringJoiner
+import scala.annotation.tailrec
 import scala.collection.mutable.Buffer
 
 object IR
@@ -135,11 +136,19 @@ object IR
       case Expr.Litteral(int) => Operand.OnInt(int)
       case Expr.Ident(name) => Operand.OnVar(Variable.Perm(name))
       case Expr.Binary(op, left, right) =>
-        val left2 = expr(left)
-        val right2 = expr(right)
-        val variable = nextTemp()
-        gen(Statement.ApplyBin(variable, BinOp.fromAST(op), left2, right2))
-        Operand.OnVar(variable)
+        val irOp = BinOp.fromAST(op)
+        @tailrec
+        def gather(next: Expr, reuse: Variable): Operand = next match
+          case Expr.Binary(op2, left, right) if op2 == op =>
+            val tmp = nextTemp()
+            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(left)))
+            gather(right, tmp)
+          case something =>
+            val tmp = nextTemp()
+            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(something)))
+            Operand.OnVar(tmp)
+        val rootVar = createVariable(expr(left))
+        gather(right, rootVar)
       case Expr.Assignment(name, term) =>
         val operand = expr(term)
         gen(Statement.Assign(Variable.Perm(name), operand))

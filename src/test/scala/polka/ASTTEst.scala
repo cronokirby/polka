@@ -39,17 +39,17 @@ class ASTTest
     val expected = IntMain(Vector(
       Statement.Return(Expr.Binary(
         BinOp.Add,
-        Vector(
-          Expr.Litteral(1),
+        Expr.Litteral(1),
+        Expr.Binary(
+          BinOp.Add,
           Expr.Unary(UnaryOp.Negate, Expr.Litteral(1)),
           Expr.Binary(
             BinOp.Times,
-            Vector(
-              Expr.Litteral(3),
-              Expr.Binary(
-                BinOp.Add,
-                Vector(Expr.Litteral(4), Expr.Litteral(2))
-              )
+            Expr.Litteral(3),
+            Expr.Binary(
+              BinOp.Add,
+              Expr.Litteral(4),
+              Expr.Litteral(2)
             )
           )
         )

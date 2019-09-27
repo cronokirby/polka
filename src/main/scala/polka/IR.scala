@@ -134,7 +134,12 @@ object IR
     private def expr(e: Expr): Operand = e match
       case Expr.Litteral(int) => Operand.OnInt(int)
       case Expr.Ident(name) => Operand.OnVar(Variable.Perm(name))
-      case Expr.Binary(op, terms) => reduceOp(terms, BinOp.fromAST(op))
+      case Expr.Binary(op, left, right) =>
+        val left2 = expr(left)
+        val right2 = expr(right)
+        val variable = nextTemp()
+        gen(Statement.ApplyBin(variable, BinOp.fromAST(op), left2, right2))
+        Operand.OnVar(variable)
       case Expr.Assignment(name, term) =>
         val operand = expr(term)
         gen(Statement.Assign(Variable.Perm(name), operand))
@@ -144,21 +149,6 @@ object IR
         val next = nextTemp()
         gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
         Operand.OnVar(next)
-
-    private def reduceOp(exprs: Vector[Expr], op: BinOp): Operand =
-      val root = expr(exprs.head)
-      if exprs.length == 1 then
-        root
-      else
-        var variable = root match
-          case Operand.OnInt(int) => createInt(int)
-          case Operand.OnVar(variable) => variable
-        for e <- exprs.tail do
-          val operand = expr(e)
-          val oldName = Operand.OnVar(variable)
-          variable = nextTemp()
-          gen(Statement.ApplyBin(variable, op, oldName, operand))
-        Operand.OnVar(variable)
 
     private def createInt(int: Int): Variable =
       val variable = nextTemp()

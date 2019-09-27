@@ -44,7 +44,7 @@ object AST
   /** Represents an expression evaluating to a value */
   enum Expr
     /** A binary operator between terms, e.g. `_ + _ + _` */
-    case Binary(op: BinOp, terms: Vector[Expr])
+    case Binary(op: BinOp, left: Expr, right: Expr)
     /** A unary operator on a given term, e.g. `!_` */
     case Unary(op: UnaryOp, term: Expr)
     /** Represents an assignment of a name to an expression */
@@ -107,7 +107,7 @@ object AST
     case PrimaryExpr.Binary(op, left, right) =>
       val (preludeL, termL) = fromPrimExpr(left)
       val (preludeR, termR) = fromPrimExpr(right)
-      val expr = Expr.Binary(BinOp.fromSyntax(op), Vector(termL, termR))
+      val expr = Expr.Binary(BinOp.fromSyntax(op), termL, termR)
       (preludeL ++ preludeR, expr)
     case PrimaryExpr.Assignment(name, expr) =>
       val (prelude, expr2) = fromPrimExpr(expr)

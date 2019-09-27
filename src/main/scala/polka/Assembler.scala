@@ -145,7 +145,8 @@ class Assembler(private val out: OutputStream)
     val counts = stmts.scanLeft(0):
       (count, s) => s match
       case IR.Statement.Create(_) => count + 1
-      case IR.Statement.Assign(v, _) => if v.isTemp then count + 1 else count
+      case IR.Statement.Assign(v, as) =>
+        if v.isTemp && !as.isTemp then count + 1 else count
       case IR.Statement.ApplyBin(to, _, left, right) =>
         val leftDies = if left.isTemp then 1 else 0
         val rightDies = if right.isTemp then 1 else 0

@@ -9,42 +9,38 @@ import Identifiers._
  *  step after this.
  */
 object Syntax
+  /** Represents at type of unary operation */
+  enum UnaryOp
+    /** Represents logical negation with `!` */
+    case Not
+    /** Represents bitwise negation, e.g. `~` */
+    case BitNot
+    /** Represents arithmetic negation, e.g. `-` */
+    case Negate
+
+  /** Represents a type of binary operation */
+  enum BinaryOp
+    /** The addition operator `+` */
+    case Add
+    /** The multiplicatoin operator `*` */
+    case Times
+
   enum PrimaryExpr
     /** Represents a litteral, e.g. `2` */
     case Litteral(value: Int)
     /** Represents a reference to a variable */
     case Ident(name: Identifier)
-    /** Represents the use of logical negation `!` */
-    case Not(value: PrimaryExpr)
-    /** Represents the use of bitwise not `~` */
-    case BitNot(value: PrimaryExpr)
-    /** Represents the use of arithmetic negation `-` */
-    case Negate(value: PrimaryExpr)
+    /** Represents a unary operation */
+    case Unary(op: UnaryOp, term: PrimaryExpr)
+    /** Represents a binary operation */
+    case Binary(op: BinaryOp, left: PrimaryExpr, right: PrimaryExpr)
+    /** Represents an assignment of an identifier to some expression */
+    case Assignment(name: Identifier, expr: PrimaryExpr)
     /** Represents the use of `()` to wrap an expression */
-    case Parens(value: Add)
-
-  /** Contains a non empty sequence of things multiplied together */
-  case class Multiply(exprs: Vector[PrimaryExpr])
-
-  /** Contains a non empty sequence of things added together */
-  case class Add(exprs: Vector[Multiply])
-
-  /** Corresponds roughly to the `assignment-expr` rule */
-  enum AssignmentExpr
-    /* Represents a pass through to the next case */
-    case Pass(add: Add)
-    /** Represents a single assignemnt of an identifier
-    *
-    *  Right now we don't handle more complicated left side
-    *  parts, e.g. `*x = 3`. Syntactically, many other things are
-    *  valid, e.g. `-x = 3`. Semantically, we need a phase to weed
-    *  these out, or reject them in simplification.
-    */
-    case Assignment(name: Identifier, expr: AssignmentExpr)
-
+    case Parens(value: TopExpr)
 
   /** Represents the entry point for expressions in C */
-  case class TopExpr(exprs: Vector[AssignmentExpr])
+  case class TopExpr(exprs: Vector[PrimaryExpr])
 
   /** Represents the name of a declaration.
    *
@@ -57,7 +53,7 @@ object Syntax
     /** A declaration without initialization, e.g. `x` */
     case Uninitialized(decl: Declarator)
     /** A declaration with initialization, e.g. `x = 2` */
-    case Initialized(decl: Declarator, init: AssignmentExpr)
+    case Initialized(decl: Declarator, init: PrimaryExpr)
 
   /** Represents a statement in a block */
   enum Statement

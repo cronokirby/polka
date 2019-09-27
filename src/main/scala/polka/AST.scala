@@ -21,6 +21,11 @@ object AST
     /** Represents multiplication `*` */
     case Times
 
+  object BinOp
+    def fromSyntax(op: Syntax.BinaryOp): BinOp = op match
+      case Syntax.BinaryOp.Add => Add
+      case Syntax.BinaryOp.Times => Times
+
   /** Represents a type of unary operation on a term */
   enum UnaryOp
     /** Represents the bitwise not operator `~` */
@@ -29,6 +34,12 @@ object AST
     case Negate
     /** Represents the logical negation operator `!` */
     case Not
+
+  object UnaryOp
+      def fromSyntax(op: Syntax.UnaryOp): UnaryOp = op match
+        case Syntax.UnaryOp.Not => Not
+        case Syntax.UnaryOp.BitNot => BitNot
+        case Syntax.UnaryOp.Negate => Negate
 
   /** Represents an expression evaluating to a value */
   enum Expr
@@ -76,35 +87,29 @@ object AST
     decls.flatMap:
       case Syntax.InitDeclarator.Uninitialized(decl) => Vector(Statement.Declaration(decl.name, None))
       case Syntax.InitDeclarator.Initialized(decl, init) =>
-        val (prelude, top) = fromAssignmentExpr(init)
+        val (prelude, top) = fromPrimExpr(init)
         prelude :+ Statement.Declaration(decl.name, Some(top))
 
   private def fromTopExpr(expr: Syntax.TopExpr): (Vector[Statement], Expr) =
-    val assigned = expr.exprs.map(fromAssignmentExpr(_))
+    val assigned = expr.exprs.map(fromPrimExpr(_))
     val tailPrelude = assigned.tail.flatMap((prelude, e) => prelude :+ Statement.ExprS(e))
     val (headPrelude, headExpr) = assigned.head
     (tailPrelude ++ headPrelude, headExpr)
 
-  private def fromAssignmentExpr(e: Syntax.AssignmentExpr): (Vector[Statement], Expr) = e match
-    case Syntax.AssignmentExpr.Pass(add) => (Vector(), fromAdd(add))
-    case Syntax.AssignmentExpr.Assignment(name, a) =>
-      val (prelude, expr) = fromAssignmentExpr(a)
-      (prelude, Expr.Assignment(name, expr))
-
-  private def fromAdd(add: Syntax.Add): Expr = add.exprs match
-    case Vector(one) => fromMultiply(one)
-    case more => Expr.Binary(BinOp.Add, more.map(fromMultiply(_)))
-
-  private def fromMultiply(mul: Syntax.Multiply): Expr = mul.exprs match
-    case Vector(one) => fromPrimExpr(one)
-    case more => Expr.Binary(BinOp.Times, more.map(fromPrimExpr(_)))
-
-  private def fromPrimExpr(prim: Syntax.PrimaryExpr): Expr =
+  private def fromPrimExpr(prim: Syntax.PrimaryExpr): (Vector[Statement], Expr) =
     import Syntax.PrimaryExpr
     prim match
-    case PrimaryExpr.Litteral(int) => Expr.Litteral(int)
-    case PrimaryExpr.Ident(name) => Expr.Ident(name)
-    case PrimaryExpr.BitNot(prim) => Expr.Unary(UnaryOp.BitNot, fromPrimExpr(prim))
-    case PrimaryExpr.Not(prim) => Expr.Unary(UnaryOp.Not, fromPrimExpr(prim))
-    case PrimaryExpr.Negate(prim) => Expr.Unary(UnaryOp.Negate, fromPrimExpr(prim))
-    case PrimaryExpr.Parens(expr) => fromAdd(expr)
+    case PrimaryExpr.Litteral(int) => (Vector(), Expr.Litteral(int))
+    case PrimaryExpr.Ident(name) => (Vector(), Expr.Ident(name))
+    case PrimaryExpr.Unary(op, term) =>
+      val (prelude, term2) = fromPrimExpr(term)
+      (prelude, Expr.Unary(UnaryOp.fromSyntax(op), term2))
+    case PrimaryExpr.Binary(op, left, right) =>
+      val (preludeL, termL) = fromPrimExpr(left)
+      val (preludeR, termR) = fromPrimExpr(right)
+      val expr = Expr.Binary(BinOp.fromSyntax(op), Vector(termL, termR))
+      (preludeL ++ preludeR, expr)
+    case PrimaryExpr.Assignment(name, expr) =>
+      val (prelude, expr2) = fromPrimExpr(expr)
+      (prelude, Expr.Assignment(name, expr2))
+    case PrimaryExpr.Parens(expr) => fromTopExpr(expr)

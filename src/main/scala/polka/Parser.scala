@@ -62,28 +62,41 @@ object Parser
     // Yes, `2, 2` is a valid expression
     assignmentExpr.sepBy1(Token.Comma).map(TopExpr(_))
 
-  private def assignmentExpr: P[Token, AssignmentExpr] =
-    def assignment: P[Token, AssignmentExpr] =
+  private def assignmentExpr: P[Token, PrimaryExpr] =
+    def assignment: P[Token, PrimaryExpr] =
       for
         i <- P.partial[Token, Identifier] { case Token.Ident(i) => i }
         _ <- P.litt(Token.Equals)
         a <- assignmentExpr
       yield
-        AssignmentExpr.Assignment(i, a)
-    def pass = add.map(AssignmentExpr.Pass(_))
+        PrimaryExpr.Assignment(i, a)
+    def pass = add
     // We need to lookahead to distinguish `x = _` vs `x`
     assignment.tried() | pass
 
-  private def add: P[Token, Add] = multiply.sepBy1(Token.Plus).map(Add(_))
+  private def binOp(op: BinaryOp, opToken: Token, next: P[Token, PrimaryExpr]): P[Token, PrimaryExpr] =
+    def opTo(left: PrimaryExpr) =
+      for
+        right <- P.litt(opToken) ~> binOp(op, opToken, next)
+      yield
+        PrimaryExpr.Binary(op, left, right)
+    next.flatMap(left => opTo(left) | P.returning(left))
 
-  private def multiply: P[Token, Multiply] = primaryExpr.sepBy1(Token.Times).map(Multiply(_))
+  private def add: P[Token, PrimaryExpr] =
+    binOp(BinaryOp.Add, Token.Plus, multiply)
+
+  private def multiply: P[Token, PrimaryExpr] =
+    binOp(BinaryOp.Times, Token.Times, primaryExpr)
+
+  private def unaryOp(op: UnaryOp, opToken: Token): P[Token, PrimaryExpr] =
+    P.litt(opToken) ~> primaryExpr.map(PrimaryExpr.Unary(op, _))
 
   private def primaryExpr: P[Token, PrimaryExpr] =
     import PrimaryExpr._
-    def higherExpr = P.litt(Token.OpenParens) ~> add.map(Parens(_)) <~ P.litt(Token.CloseParens)
-    def not = P.litt(Token.Exclamation) ~> primaryExpr.map(Not(_))
-    def bitNot = P.litt(Token.Tilde) ~> primaryExpr.map(BitNot(_))
-    def negate = P.litt(Token.Minus) ~> primaryExpr.map(Negate(_))
+    def higherExpr = P.litt(Token.OpenParens) ~> topExpr.map(Parens(_)) <~ P.litt(Token.CloseParens)
+    def not = unaryOp(UnaryOp.Not, Token.Exclamation)
+    def bitNot = unaryOp(UnaryOp.BitNot, Token.Tilde)
+    def negate = unaryOp(UnaryOp.Negate, Token.Minus)
     def litteral = P.partial[Token, PrimaryExpr]:
       case Token.IntLitteral(i) => Litteral(i)
     def ident = P.partial[Token, PrimaryExpr]:

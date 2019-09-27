@@ -135,6 +135,15 @@ object IR
     private def expr(e: Expr): Operand = e match
       case Expr.Litteral(int) => Operand.OnInt(int)
       case Expr.Ident(name) => Operand.OnVar(Variable.Perm(name))
+      case Expr.Assignment(name, term) =>
+        val operand = expr(term)
+        gen(Statement.Assign(Variable.Perm(name), operand))
+        Operand.OnVar(Variable.Perm(name))
+      case Expr.Unary(op, term) =>
+        val name = createVariable(expr(term))
+        val next = nextTemp()
+        gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
+        Operand.OnVar(next)
       case Expr.Binary(op, left, right) =>
         val irOp = BinOp.fromAST(op)
         @tailrec
@@ -149,15 +158,6 @@ object IR
             Operand.OnVar(tmp)
         val rootVar = createVariable(expr(left))
         gather(right, rootVar)
-      case Expr.Assignment(name, term) =>
-        val operand = expr(term)
-        gen(Statement.Assign(Variable.Perm(name), operand))
-        Operand.OnVar(Variable.Perm(name))
-      case Expr.Unary(op, term) =>
-        val name = createVariable(expr(term))
-        val next = nextTemp()
-        gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
-        Operand.OnVar(next)
 
     private def createInt(int: Int): Variable =
       val variable = nextTemp()

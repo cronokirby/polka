@@ -166,3 +166,19 @@ class ParserTest
       Statement.Expr(TopExpr(Vector(two, two)))
     ))
     assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `subtractions parse`: Unit =
+    val program = "int main() { return 1 + 2 - 3; }"
+    val expected = IntMain(Vector(
+      Statement.Return(TopExpr(Vector(PrimaryExpr.Binary(
+        BinaryOp.Sub,
+        PrimaryExpr.Binary(
+          BinaryOp.Add,
+          PrimaryExpr.Litteral(1),
+          PrimaryExpr.Litteral(2)
+        ),
+        PrimaryExpr.Litteral(3)
+      ))))
+    ))
+    assertEquals(Right(expected), parse(program))

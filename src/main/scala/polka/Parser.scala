@@ -74,19 +74,20 @@ object Parser
     // We need to lookahead to distinguish `x = _` vs `x`
     assignment.tried() | pass
 
-  private def binOp(op: BinaryOp, opToken: Token, next: P[Token, PrimaryExpr]): P[Token, PrimaryExpr] =
+  private def binOp(next: P[Token, PrimaryExpr], ops: Token*)(mkOp: Token => BinaryOp): P[Token, PrimaryExpr] =
     @tailrec
-    def associateLeft(root: PrimaryExpr, rest: Vector[PrimaryExpr]): PrimaryExpr =
-      rest match
+    def associateLeft(root: PrimaryExpr, rest: Vector[(Token, PrimaryExpr)]): PrimaryExpr = rest match
       case Vector() => root
-      case head +: tail => associateLeft(PrimaryExpr.Binary(op, root, head), tail)
-    next.sepBy1(opToken).map(prims => associateLeft(prims.head, prims.tail))
+      case (tok, expr) +: tail => associateLeft(PrimaryExpr.Binary(mkOp(tok), root, expr), tail)
+    next.sepByVarying(ops: _*).map((root, rest) => associateLeft(root, rest))
 
   private def add: P[Token, PrimaryExpr] =
-    binOp(BinaryOp.Add, Token.Plus, multiply)
+    binOp(multiply, Token.Plus, Token.Minus):
+      case Token.Plus => BinaryOp.Add
+      case _ => BinaryOp.Sub
 
   private def multiply: P[Token, PrimaryExpr] =
-    binOp(BinaryOp.Times, Token.Times, primaryExpr)
+    binOp(primaryExpr, Token.Times)(_ => BinaryOp.Times)
 
   private def unaryOp(op: UnaryOp, opToken: Token): P[Token, PrimaryExpr] =
     P.litt(opToken) ~> primaryExpr.map(PrimaryExpr.Unary(op, _))

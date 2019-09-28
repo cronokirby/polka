@@ -200,3 +200,14 @@ class Parser[T, A](val run: Cursor[T] => Parser.Result[T, A])
       x <- this
       xs <- (litt(sep) ~> this).many()
     yield x +: xs
+
+  /** This is useful to distinguish different seperators */
+  def sepByVarying(seps: T*): Parser[T, (A, Vector[(T, A)])] =
+    require(!seps.isEmpty, "Seperators must not be empty")
+    def pairWith(token: T) = for t <- litt(token); x <- this yield (t, x)
+    def pairs = seps.tail.foldLeft(pairWith(seps.head))((acc, x) => acc | pairWith(x))
+    for
+      x <- this
+      paired <- pairs.many()
+    yield
+      (x, paired)

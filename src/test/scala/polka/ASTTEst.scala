@@ -82,3 +82,21 @@ class ASTTest
       Statement.Return(Expr.Ident(Identifier("x")))
     ))
     assertEquals(Right(expected), ast(program))
+
+  @Test
+  def `subtractions parse`: Unit =
+    val program = "int main() { return 1 + 2 - 3; }"
+    val expected = IntMain(Vector(
+      Statement.Return(
+        Expr.Binary(
+          BinOp.Sub,
+          Expr.Binary(
+            BinOp.Add,
+            Expr.Litteral(1),
+            Expr.Litteral(2)
+          ),
+          Expr.Litteral(3)
+        )
+      )
+    ))
+    assertEquals(Right(expected), ast(program))

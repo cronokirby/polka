@@ -22,6 +22,8 @@ object Syntax
   enum BinaryOp
     /** The addition operator `+` */
     case Add
+    /** The subtraction operator `-` */
+    case Sub
     /** The multiplicatoin operator `*` */
     case Times
 

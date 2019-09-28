@@ -18,12 +18,15 @@ object AST
   enum BinOp
     /** Represents addition `+` */
     case Add
+    /** Represents subtraction `-` */
+    case Sub
     /** Represents multiplication `*` */
     case Times
 
   object BinOp
     def fromSyntax(op: Syntax.BinaryOp): BinOp = op match
       case Syntax.BinaryOp.Add => Add
+      case Syntax.BinaryOp.Sub => Sub
       case Syntax.BinaryOp.Times => Times
 
   /** Represents a type of unary operation on a term */

@@ -42,17 +42,25 @@ object IR
     case Sub
     /** Add the two operands using `*` */
     case Times
+    /** Get the result of dividing two operands using `/` */
+    case Divide
+    /** Get the modulus of two operands using `%` */
+    case Modulo
 
     def pprint: String = this match
       case Add => "+"
       case Sub => "-"
       case Times => "*"
+      case Divide => "/"
+      case Modulo => "%"
 
   object BinOp
     def fromAST(op: AST.BinOp): BinOp = op match
-      case AST.BinOp.Add => BinOp.Add
-      case AST.BinOp.Sub => BinOp.Sub
-      case AST.BinOp.Times => BinOp.Times
+      case AST.BinOp.Add => Add
+      case AST.BinOp.Sub => Sub
+      case AST.BinOp.Times => Times
+      case AST.BinOp.Divide => Divide
+      case AST.BinOp.Modulo => Modulo
 
   /** Represents a unary operation against a single operand */
   enum UnaryOp

@@ -28,6 +28,7 @@ object Assembler
   private trait AsmArg
     def asm(size: Size): String
     def doesMath: Boolean = false
+    def isLocation: Boolean = false
 
   private case class Constant(value: Int) extends AsmArg
     def asm(size: Size) = "$" + value
@@ -37,10 +38,13 @@ object Assembler
     case RAX
     case RBX
     case RCX
+    case RDX
     case RSP
     case R10
 
     override def doesMath = true
+
+    override def isLocation = true
 
     def asm(size: Size) = (this, size) match
       case (RAX, Size.B) => "%al"
@@ -52,6 +56,9 @@ object Assembler
       case (RCX, Size.B) => "%cl"
       case (RCX, Size.L) => "%ecx"
       case (RCX, Size.Q) => "%rcx"
+      case (RDX, Size.B) => "%dl"
+      case (RDX, Size.L) => "%edx"
+      case (RDX, Size.Q) => "%rdx"
       case (RSP, Size.B) => "%spl"
       case (RSP, Size.L) => "%esp"
       case (RSP, Size.Q) => "%rsp"
@@ -61,6 +68,8 @@ object Assembler
 
   private case class Shifted(reg: Reg, by: Int) extends AsmArg
     def asm(size: Size) = s"$by(${reg.asm(Size.Q)})"
+
+    override def isLocation = true
 
   private class StatementCtx(private val free: Stack[AsmArg], val scratch: Reg, val epilogue: Outputting[Unit])
     private val owners = Map[IR.Variable, AsmArg]()
@@ -91,8 +100,11 @@ object Assembler
   private def add(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     binaryOp("add", size, source, dest)
 
-  private def sub(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
-    binaryOp("sub", size, source, dest)
+  private def cltd(): Outputting[Unit] =
+    writeln("\tcltd")
+
+  private def idiv(size: Size, source: AsmArg): Outputting[Unit] =
+    unaryOp("idiv", size, source)
 
   private def mul(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
     binaryOp("imul", size, source, dest)
@@ -118,6 +130,9 @@ object Assembler
   // This operator only works with bytes
   private def sete(dest: AsmArg): Outputting[Unit] =
     writeln(s"\tsete\t${dest.asm(Size.B)}")
+
+  private def sub(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
+    binaryOp("sub", size, source, dest)
 
   // This operator's destination is always a byte
   private def test(size: Size, source: AsmArg, dest: AsmArg): Outputting[Unit] =
@@ -182,6 +197,28 @@ class Assembler(private val out: OutputStream)
           mov(Size.Q, dest, ctx.scratch)
           mul(Size.L, source, ctx.scratch)
           mov(Size.Q, ctx.scratch, dest)
+      // dest = dest / source
+      case IR.BinOp.Divide => doDivision(true)(dest, source)
+      case IR.BinOp.Modulo => doDivision(false)(dest, source)
+
+    // This function assumes RDX is used by nothing else, and can be clobbered
+    def doDivision(quotient: Boolean)(arg: AsmArg, by: AsmArg): Unit =
+      val divisor =
+        if by == Reg.RAX || !by.isLocation then
+          mov(Size.L, by, ctx.scratch)
+          ctx.scratch
+        else
+          by
+      if arg != Reg.RAX then
+        push(Reg.RAX)
+        mov(Size.L, arg, Reg.RAX)
+      cltd()
+      idiv(Size.L, divisor)
+      val toMove = if quotient then Reg.RAX else Reg.RDX
+      if arg != toMove then
+        mov(Size.L, toMove, arg)
+      if arg != Reg.RAX then
+        pop(Reg.RAX)
 
     def binWithInt(to: IR.Variable, op: IR.BinOp, int: Int, source: IR.Variable): Unit =
       val canReuse = source.isTemp || source == to

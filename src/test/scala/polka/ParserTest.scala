@@ -197,3 +197,4 @@ class ParserTest
         PrimaryExpr.Litteral(1)
       ))))
     ))
+    assertEquals(Right(expected), parse(program))

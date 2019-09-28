@@ -37,21 +37,21 @@ class ParserTest
     val expected = IntMain(Vector(Statement.Return(TopExpr(Vector(
       PrimaryExpr.Binary(
         BinaryOp.Add,
-        PrimaryExpr.Litteral(1),
         PrimaryExpr.Binary(
           BinaryOp.Add,
-          PrimaryExpr.Unary(UnaryOp.Negate, PrimaryExpr.Litteral(1)),
-          PrimaryExpr.Binary(
-            BinaryOp.Times,
-            PrimaryExpr.Litteral(3),
-            PrimaryExpr.Parens(TopExpr(Vector(
-              PrimaryExpr.Binary(
-                BinaryOp.Add,
-                PrimaryExpr.Litteral(4),
-                PrimaryExpr.Litteral(2)
-              )
-            )))
-          )
+          PrimaryExpr.Litteral(1),
+          PrimaryExpr.Unary(UnaryOp.Negate, PrimaryExpr.Litteral(1))
+        ),
+        PrimaryExpr.Binary(
+          BinaryOp.Times,
+          PrimaryExpr.Litteral(3),
+          PrimaryExpr.Parens(TopExpr(Vector(
+            PrimaryExpr.Binary(
+              BinaryOp.Add,
+              PrimaryExpr.Litteral(4),
+              PrimaryExpr.Litteral(2)
+            )
+          )))
         )
       )
     )))))

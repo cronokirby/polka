@@ -75,12 +75,12 @@ object Parser
     assignment.tried() | pass
 
   private def binOp(op: BinaryOp, opToken: Token, next: P[Token, PrimaryExpr]): P[Token, PrimaryExpr] =
-    def opTo(left: PrimaryExpr) =
-      for
-        right <- P.litt(opToken) ~> binOp(op, opToken, next)
-      yield
-        PrimaryExpr.Binary(op, left, right)
-    next.flatMap(left => opTo(left) | P.returning(left))
+    @tailrec
+    def associateLeft(root: PrimaryExpr, rest: Vector[PrimaryExpr]): PrimaryExpr =
+      rest match
+      case Vector() => root
+      case head +: tail => associateLeft(PrimaryExpr.Binary(op, root, head), tail)
+    next.sepBy1(opToken).map(prims => associateLeft(prims.head, prims.tail))
 
   private def add: P[Token, PrimaryExpr] =
     binOp(BinaryOp.Add, Token.Plus, multiply)

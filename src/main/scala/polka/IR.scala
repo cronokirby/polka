@@ -147,17 +147,18 @@ object IR
       case Expr.Binary(op, left, right) =>
         val irOp = BinOp.fromAST(op)
         @tailrec
-        def gather(next: Expr, reuse: Variable): Operand = next match
+        def gather(next: Expr, reuse: Variable): Operand =
+          next match
           case Expr.Binary(op2, left, right) if op2 == op =>
             val tmp = nextTemp()
-            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(left)))
-            gather(right, tmp)
+            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(right)))
+            gather(left, tmp)
           case something =>
             val tmp = nextTemp()
             gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(something)))
             Operand.OnVar(tmp)
-        val rootVar = createVariable(expr(left))
-        gather(right, rootVar)
+        val rootVar = createVariable(expr(right))
+        gather(left, rootVar)
 
     private def createInt(int: Int): Variable =
       val variable = nextTemp()

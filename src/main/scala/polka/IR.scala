@@ -38,16 +38,20 @@ object IR
   enum BinOp
     /** Add the two operands using `+` */
     case Add
+    /** Subtract the left operand from the right with `-` */
+    case Sub
     /** Add the two operands using `*` */
     case Times
 
     def pprint: String = this match
       case Add => "+"
+      case Sub => "-"
       case Times => "*"
 
   object BinOp
     def fromAST(op: AST.BinOp): BinOp = op match
       case AST.BinOp.Add => BinOp.Add
+      case AST.BinOp.Sub => BinOp.Sub
       case AST.BinOp.Times => BinOp.Times
 
   /** Represents a unary operation against a single operand */

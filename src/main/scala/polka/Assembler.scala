@@ -173,6 +173,8 @@ class Assembler(private val out: OutputStream)
     def applyOp(op: IR.BinOp, source: AsmArg, dest: AsmArg): Unit = op match
       case IR.BinOp.Add =>
         add(Size.L, source, dest)
+      case IR.BinOp.Sub =>
+        sub(Size.L, source, dest)
       case IR.BinOp.Times =>
         if dest.doesMath then
           mul(Size.L, source, dest)

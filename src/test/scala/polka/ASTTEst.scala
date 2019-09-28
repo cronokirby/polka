@@ -100,3 +100,19 @@ class ASTTest
       )
     ))
     assertEquals(Right(expected), ast(program))
+
+  @Test
+  def `divisions and modulus parse`: Unit =
+    val program = "int main() { return 1 / 1 % 1; }"
+    val expected = IntMain(Vector(
+      Statement.Return(Expr.Binary(
+        BinOp.Modulo,
+        Expr.Binary(
+          BinOp.Divide,
+          Expr.Litteral(1),
+          Expr.Litteral(1)
+        ),
+        Expr.Litteral(1)
+      ))
+    ))
+    assertEquals(Right(expected), ast(program))

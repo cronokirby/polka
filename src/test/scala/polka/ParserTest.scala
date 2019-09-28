@@ -182,3 +182,18 @@ class ParserTest
       ))))
     ))
     assertEquals(Right(expected), parse(program))
+
+  @Test
+  def `divisions and modulus parse`: Unit =
+    val program = "int main() { return 1 / 1 % 1; }"
+    val expected = IntMain(Vector(
+      Statement.Return(TopExpr(Vector(PrimaryExpr.Binary(
+        BinaryOp.Modulo,
+        PrimaryExpr.Binary(
+          BinaryOp.Divide,
+          PrimaryExpr.Litteral(1),
+          PrimaryExpr.Litteral(1)
+        ),
+        PrimaryExpr.Litteral(1)
+      ))))
+    ))

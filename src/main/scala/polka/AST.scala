@@ -22,12 +22,18 @@ object AST
     case Sub
     /** Represents multiplication `*` */
     case Times
+    /** Represents division `/` */
+    case Divide
+    /** Represents taking the remainder of division `%` */
+    case Modulo
 
   object BinOp
     def fromSyntax(op: Syntax.BinaryOp): BinOp = op match
       case Syntax.BinaryOp.Add => Add
       case Syntax.BinaryOp.Sub => Sub
       case Syntax.BinaryOp.Times => Times
+      case Syntax.BinaryOp.Divide => Divide
+      case Syntax.BinaryOp.Modulo => Modulo
 
   /** Represents a type of unary operation on a term */
   enum UnaryOp

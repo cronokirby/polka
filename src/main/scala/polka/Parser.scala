@@ -87,7 +87,10 @@ object Parser
       case _ => BinaryOp.Sub
 
   private def multiply: P[Token, PrimaryExpr] =
-    binOp(primaryExpr, Token.Times)(_ => BinaryOp.Times)
+    binOp(primaryExpr, Token.Times, Token.Slash, Token.Percent):
+      case Token.Times => BinaryOp.Times
+      case Token.Slash => BinaryOp.Divide
+      case _ => BinaryOp.Modulo
 
   private def unaryOp(op: UnaryOp, opToken: Token): P[Token, PrimaryExpr] =
     P.litt(opToken) ~> primaryExpr.map(PrimaryExpr.Unary(op, _))

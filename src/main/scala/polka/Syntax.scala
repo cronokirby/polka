@@ -26,6 +26,10 @@ object Syntax
     case Sub
     /** The multiplicatoin operator `*` */
     case Times
+    /** The division operator `/` */
+    case Divide
+    /** The modulus operator `%` */
+    case Modulo
 
   enum PrimaryExpr
     /** Represents a litteral, e.g. `2` */

@@ -148,21 +148,19 @@ object IR
         val next = nextTemp()
         gen(Statement.ApplyUnary(next, UnaryOp.fromAST(op), name))
         Operand.OnVar(next)
-      case Expr.Binary(op, left, right) =>
+      case root@Expr.Binary(op, _, _) =>
         val irOp = BinOp.fromAST(op)
         @tailrec
-        def gather(next: Expr, reuse: Variable): Operand =
-          next match
+        def gatherRight(next: Expr, acc: Vector[Expr]): Vector[Expr] = next match
           case Expr.Binary(op2, left, right) if op2 == op =>
-            val tmp = nextTemp()
-            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(right)))
-            gather(left, tmp)
-          case something =>
-            val tmp = nextTemp()
-            gen(Statement.ApplyBin(tmp, irOp, Operand.OnVar(reuse), expr(something)))
+            gatherRight(left, right +: acc)
+          case something => something +: acc
+        val exprs = gatherRight(root, Vector())
+        exprs.tail.foldLeft(expr(exprs.head)):
+          (operand, right) =>
+            var tmp = nextTemp()
+            gen(Statement.ApplyBin(tmp, irOp, operand, expr(right)))
             Operand.OnVar(tmp)
-        val rootVar = createVariable(expr(right))
-        gather(left, rootVar)
 
     private def createInt(int: Int): Variable =
       val variable = nextTemp()

@@ -39,6 +39,10 @@ object Lexer
     case Times
     /** The operator `=` */
     case Equals
+    /** The operator `/` */
+    case Slash
+    /** The operator `%` */
+    case Percent
     /** An integer litteral */
     case IntLitteral(value: Int)
     /** An identifier */
@@ -97,7 +101,10 @@ private class Lexer(program: String)
         source.headOption match
         case Some('/') => singleLineComment()
         case Some('*') => multiLineComment()
-        case _ => return Some(Left(Error("Unknown token `/`")))
+        case _ => return Some(Right(Token.Slash))
+      case '%' =>
+        source.next()
+        return Some(Right(Token.Percent))
       case '!' =>
         source.next()
         return Some(Right(Token.Exclamation))

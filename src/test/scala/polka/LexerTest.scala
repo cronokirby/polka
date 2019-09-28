@@ -70,3 +70,12 @@ class LexerTest
       Token.Ident(Identifier("y"))
     )
     assertEquals(Right(expected), items)
+
+  @Test
+  def `division and modules lex`: Unit =
+    val program = "/ %"
+    val items = Lexer.lex(program)
+    val expected = Vector(
+      Token.Slash,
+      Token.Percent
+    )
